@@ -68,8 +68,10 @@ import { isSshWorkspaceUri, parseSshWorkspace } from './remote-workspace.mjs';
 import { EXPR_SSH_WINDOW_IDENTITY, inspectSshWindowIdentity } from './ssh-window-identity.mjs';
 import { NamedConnectionController } from './connection-controller.mjs';
 import { createUnifiedHistoryAdapter } from './unified-history-adapter.mjs';
+import { classifyCursorUiFlavor } from './page-ui-flavor.mjs';
+import { locateNewAgentTarget } from './new-agent-target.mjs';
 
-const PLUGIN_VERSION = '6.0.9-ssh.3';
+const PLUGIN_VERSION = '6.0.9-ssh.4';
 const CDP_PORT = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 const ORIGIN = `http://localhost:${CDP_PORT}`;
 const QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 300000);
@@ -619,7 +621,7 @@ function exprClickBoundComposerStop(agentId) {
   })()`;
 }
 // "New Agent" 新对话钮中心坐标。新版 Cursor Agents 只有可见文本，旧版主要依赖 aria-label。
-const EXPR_FIND_NEWAGENT = `(function(){const b=[...document.querySelectorAll('button,[role=button],a.action-label,.codicon')].find(e=>{if(e.offsetParent===null||e.closest('.glass-sidebar-agent-menu-btn'))return false;const s=(e.getAttribute('aria-label')||'')+' '+(e.getAttribute('title')||'')+' '+(e.innerText||'');return /(?:^|\\s)New (?:Agent|Chat)(?:\\s|$)/i.test(s);});if(!b)return '';const r=b.getBoundingClientRect();return JSON.stringify({x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)});})()`;
+const EXPR_FIND_NEWAGENT = `JSON.stringify((${locateNewAgentTarget.toString()})(document))`;
 
 const MODEL_PICKER_VISIBLE_BODY = `
   ${INPUT_PICKER_BODY}
@@ -1490,15 +1492,13 @@ const EXPR_VISIBLE_COMPOSER = `(function(){
 
 const EXPR_AGENT_ADAPTER_READY = `(function(){${REACT_ADAPTER_BODY}return !!a;})()`;
 const EXPR_PAGE_CAPABILITIES = `(function(){${INPUT_PICKER_BODY}
+  ${REACT_ADAPTER_BODY}
   const visible=node=>!!(node&&(node.offsetParent!==null||(typeof node.getClientRects==='function'&&node.getClientRects().length>0)));
   const label=node=>String(node&&(node.getAttribute&&(
     node.getAttribute('aria-label')||node.getAttribute('title'))||node.innerText||node.textContent)||'').replace(/\\s+/g,' ').trim();
   const input=pickInput();
   const inputCandidateCount=[...document.querySelectorAll(${JSON.stringify(CURSOR_INPUT_SELECTOR)})].filter(visible).length;
-  const hasV2Sidebar=!!document.querySelector('.glass-sidebar-agent-list-container');
-  const hasLegacyInput=!!document.querySelector('.aislash-editor-input');
-  const hasLegacyHistory=!!document.querySelector('.compact-agent-history-react-menu-label')||
-    [...document.querySelectorAll('button,[role=button],a.action-label,.codicon')].some(e=>/Show Chat History|Chat History|Agent History/i.test((e.getAttribute('aria-label')||'')+' '+(e.getAttribute('title')||'')));
+  const ui=(${classifyCursorUiFlavor.toString()})(document,{adapterKind:a?a.kind:'none'});
   const dialogs=[...document.querySelectorAll('[role="dialog"],dialog[open],.monaco-dialog-box,.quick-input-widget')]
     .filter(visible).filter(node=>node.getAttribute('data-component')!=='preview-card-layer-popup');
   const dialog=dialogs[dialogs.length-1]||null;
@@ -1518,11 +1518,9 @@ const EXPR_PAGE_CAPABILITIES = `(function(){${INPUT_PICKER_BODY}
   const signInControlVisible=authControls.some(node=>signInPattern.test(label(node)));
   const signInVisible=authControls.some(node=>signInPattern.test(label(node))&&!node.closest(configurationSelector));
   const composerCount=[...document.querySelectorAll('.composer-bar[data-composer-id],.composer-bar,.ui-prompt-input-root')].filter(visible).length;
-  const agentSurfaceVisible=composerCount>0||[...document.querySelectorAll('.glass-sidebar-agent-list-container,.compact-agent-history-react-menu-label,.aichat-container')].some(visible)||authControls.some(node=>/(?:New (?:Agent|Chat)|(?:Chat|Agent) History)/i.test(label(node)));
-  const uiFlavor=hasV2Sidebar||(input&&input.classList&&input.classList.contains('ui-prompt-input-editor__input'))?'agents_v2':hasLegacyInput?'legacy':'unknown';
+  const agentSurfaceVisible=!!a||composerCount>0||[...document.querySelectorAll('.glass-sidebar-agent-list-container,.compact-agent-history-react-menu-label,.aichat-container')].some(visible)||authControls.some(node=>/(?:New (?:Agent|Chat)|(?:Chat|Agent) History)/i.test(label(node)));
   return JSON.stringify({
-    hasWritableInput:!!input,inputCandidateCount,uiFlavor,
-    agentAdapterKind:hasV2Sidebar?'agents_v2':hasLegacyHistory?'legacy':'none',
+    hasWritableInput:!!input,inputCandidateCount,...ui,
     hasComposer:!!document.querySelector('.composer-bar[data-composer-id]'),
     modalVisible:!!dialog,modalLabel:dialogLabel,
     settingsOrCustomizeVisible,signInControlVisible,signInVisible,agentSurfaceVisible,composerCount,
@@ -2347,31 +2345,91 @@ class CursorBridge {
     return (await httpJson('/json/list')).filter(page => page.type === 'page' && page.webSocketDebuggerUrl);
   }
 
-  async _inspectSshPage(page, workspace) {
-    const c = makeClient(page.webSocketDebuggerUrl);
+  async _inspectSshPage(page, workspace, { createClient = makeClient } = {}) {
+    let c;
+    let stage = 'connect';
+    let identityVerified = false;
     try {
+      c = createClient(page.webSocketDebuggerUrl);
       await c.ready;
+      stage = 'identity';
       const identity = inspectSshWindowIdentity(await evalJS(c, EXPR_SSH_WINDOW_IDENTITY, { timeoutMs: 5000 }), workspace);
-      if (!identity.ok) return identity;
-      const capabilities = JSON.parse(await evalJS(c, EXPR_PAGE_CAPABILITIES, { timeoutMs: 5000 }) || '{}');
-      if (capabilities.uiFlavor !== 'legacy') return { ok: false, reason: 'SSH_CLASSIC_IDE_REQUIRED' };
+      if (!identity.ok) return { ...identity, stage };
+      identityVerified = true;
+      stage = 'capabilities';
+      const capabilities = JSON.parse(await evalJS(c, EXPR_PAGE_CAPABILITIES, { timeoutMs: 5000 }));
+      if (!capabilities || typeof capabilities !== 'object' || Array.isArray(capabilities)
+          || !['legacy', 'agents_v2', 'unknown'].includes(capabilities.uiFlavor)) {
+        throw cursorSessionError('SSH_CAPABILITIES_INVALID', 'The page capability probe returned an invalid payload');
+      }
+      if (capabilities.uiFlavor !== 'legacy') return {
+        ok: false, reason: 'SSH_CLASSIC_IDE_REQUIRED', stage: 'ui-classification',
+        identityVerified: true, capabilities,
+      };
       return { ...identity, capabilities };
-    } finally { c.close(); }
+    } catch (error) {
+      return { ok: false, reason: 'SSH_PAGE_PROBE_FAILED', stage, identityVerified,
+        probeError: { code: error.code || error.name || 'SSH_PAGE_PROBE_ERROR',
+          message: String(error.message || error).slice(0, 500),
+          ...(error.cdp ? { cdp: error.cdp } : {}) } };
+    } finally { c?.close(); }
   }
 
   async _findSshWorkspace(workspace, targetId = '') {
-    const pages = await this._listSshPages();
+    const diagnostic = { probeReadOnly: true, targetId: targetId || null, pageCount: 0, candidateCount: 0, matchingCount: 0, rejections: [] };
+    const fail = (code, message) => {
+      const error = cursorSessionError(code, message);
+      error.sshDiagnostic = diagnostic;
+      throw error;
+    };
+    let pages;
+    try { pages = await this._listSshPages(); }
+    catch (error) {
+      diagnostic.stage = 'page-enumeration';
+      diagnostic.probeError = { code: error.code || error.name || 'CDP_LIST_ERROR',
+        message: String(error.message || error).slice(0, 500) };
+      fail('SSH_PAGE_ENUMERATION_FAILED', 'Cannot enumerate Cursor CDP targets; check the debug-port connection before retrying.');
+    }
+    diagnostic.pageCount = pages.length;
+    const candidates = targetId ? pages.filter(page => page.id === targetId) : pages;
+    diagnostic.candidateCount = candidates.length;
+    if (targetId && !candidates.length) {
+      diagnostic.stage = 'target-selection';
+      fail('SSH_TARGET_NOT_FOUND', 'The bound Cursor target is no longer present; run cursor_ssh_init to explicitly select an open SSH window.');
+    }
     const matches = [];
-    for (const page of targetId ? pages.filter(page => page.id === targetId) : pages) {
+    for (const page of candidates) {
       try {
         const identity = await this._inspectSshPage(page, workspace);
         if (identity.ok) matches.push({ page, identity });
-      } catch { /* Unreadable targets are never a reason to guess by title. */ }
+        else diagnostic.rejections.push({ targetId: page.id, stage: identity.stage || 'identity',
+          reason: identity.reason || 'SSH_IDENTITY_UNAVAILABLE',
+          identityVerified: identity.identityVerified === true,
+          ...(identity.capabilities ? { uiFlavor: identity.capabilities.uiFlavor,
+            agentAdapterKind: identity.capabilities.agentAdapterKind,
+            uiEvidence: identity.capabilities.uiEvidence } : {}),
+          ...(identity.probeError ? { probeError: identity.probeError } : {}) });
+      } catch (error) {
+        diagnostic.rejections.push({ targetId: page.id, stage: 'page-inspection', reason: 'SSH_PAGE_PROBE_FAILED',
+          probeError: { code: error.code || error.name || 'SSH_PAGE_PROBE_ERROR',
+            message: String(error.message || error).slice(0, 500) } });
+      }
     }
-    if (matches.length !== 1) throw cursorSessionError(
-      matches.length > 1 ? 'SSH_WORKSPACE_AMBIGUOUS' : 'SSH_WORKSPACE_NOT_FOUND',
-      `Expected one already-open classic Cursor IDE window for ${workspace.uri}; found ${matches.length}. Open that SSH folder with CDP enabled, or specify its exact target_id.`,
-    );
+    diagnostic.matchingCount = matches.length;
+    if (matches.length > 1) fail('SSH_WORKSPACE_AMBIGUOUS', `Found ${matches.length} verified Cursor windows for ${workspace.uri}; specify the exact target_id.`);
+    if (!matches.length) {
+      const rejected = diagnostic.rejections;
+      if (rejected.some(item => item.reason === 'SSH_PAGE_PROBE_FAILED')) {
+        fail('SSH_PAGE_PROBE_FAILED', 'Cursor targets exist but a CDP connection or page probe failed; inspect sshDiagnostic before retrying.');
+      }
+      if (rejected.some(item => item.reason === 'SSH_CLASSIC_IDE_REQUIRED')) {
+        fail('SSH_CLASSIC_IDE_REQUIRED', 'The SSH identity matches, but a classic Cursor IDE surface could not be confirmed; inspect sshDiagnostic.');
+      }
+      if (rejected.some(item => !['remote_authority_mismatch', 'folder_uri_authority_mismatch', 'folder_uri_path_mismatch'].includes(item.reason))) {
+        fail('SSH_WINDOW_IDENTITY_UNAVAILABLE', 'Cursor targets exist, but their SSH folder identity could not be verified; inspect sshDiagnostic.');
+      }
+      fail('SSH_WORKSPACE_NOT_FOUND', `No verified open Cursor window matches ${workspace.uri}; inspect sshDiagnostic or specify its exact target_id.`);
+    }
     return matches[0];
   }
 
@@ -4000,15 +4058,25 @@ class CursorBridge {
 
   async _clickNewAgent(c, replaceCurrent) {
     try {
-      const pos = await evalJS(c, EXPR_FIND_NEWAGENT);
-      if (!pos) return false;
-      const { x, y } = JSON.parse(pos);
+      let target = JSON.parse(await evalJS(c, EXPR_FIND_NEWAGENT) || '{}');
+      if (target.state === 'blocked_by_menu') {
+        if (isSshWorkspaceUri(this.projectPath)) await this._verifySshWorkspace(c, {}, 'before_menu_dismiss');
+        await chord(c, 0, 'Escape', 'Escape', 27);
+        await sleep(200);
+        target = JSON.parse(await evalJS(c, EXPR_FIND_NEWAGENT) || '{}');
+      }
+      if (target.state !== 'ready' || !Number.isFinite(target.x) || !Number.isFinite(target.y)) return false;
+      if (isSshWorkspaceUri(this.projectPath)) await this._verifySshWorkspace(c, {}, 'before_new_agent_click');
+      const { x, y } = target;
       const modifiers = replaceCurrent ? 1 : 0;
       await c.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1, modifiers });
       await c.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1, modifiers });
       await sleep(1100);   // 等新对话初始化（输入框重建 + 回复区清空）
       return true;
-    } catch { return false; }
+    } catch (error) {
+      if (isSshWorkspaceUri(this.projectPath)) throw error;
+      return false;
+    }
   }
 
   async _ensureHistoryOpen(c) {
@@ -5981,7 +6049,7 @@ async function ensureBridgeCursor(targetBridge, reason) {
 
 function toolErrorResult(error) {
   const message = error instanceof Error ? error.message : String(error);
-  if (error && (error.uiDiagnostic || error.modelSelection || error.pickerRead || error.cdp || error.workspaceRecovery)) {
+  if (error && (error.uiDiagnostic || error.modelSelection || error.pickerRead || error.cdp || error.workspaceRecovery || error.sshDiagnostic)) {
     const payload = {
       error: { code: error.code || error.uiDiagnostic?.code || 'CURSOR_BRIDGE_ERROR', message },
       ...(error.uiDiagnostic ? { uiDiagnostic: error.uiDiagnostic } : {}),
@@ -5989,6 +6057,7 @@ function toolErrorResult(error) {
       ...(error.pickerRead ? { pickerRead: error.pickerRead } : {}),
       ...(error.cdp ? { cdp: error.cdp } : {}),
       ...(error.workspaceRecovery ? { workspaceRecovery: error.workspaceRecovery } : {}),
+      ...(error.sshDiagnostic ? { sshDiagnostic: error.sshDiagnostic } : {}),
     };
     return {
       content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],

@@ -106,6 +106,27 @@ test('SSH entry points reject writes, isolated execution, missing request IDs an
   assert.equal(bridge.queue.length, 0);
 });
 
+test('a collected completed SSH task permits a new independent session in the same pinned window', async t => {
+  const { bridge } = fixture(t);
+  await bridge.initializeSshWorkspace(uri);
+  const first = await bridge.sshSessionTurn('Read first', { requestId: 'fresh-first' });
+  const job = bridge.queue.shift();
+  Object.assign(job, { status: 'completed', result: 'first result',
+    agentId: 'local:11111111-1111-4111-8111-111111111111', terminalEvidence: 'fixture_completed' });
+  bridge._settleSessionJob(job, 'completed');
+  bridge._markTaskResultCollected(job);
+  const second = await bridge.sshSessionTurn('Read independently', { requestId: 'fresh-second' });
+  assert.notEqual(first.sessionId, second.sessionId);
+  assert.equal(bridge._lastLifecycle.targetId, 'ssh-target');
+  assert.equal(bridge.queue.length, 1);
+  assert.equal(bridge.queue[0].newChat, true);
+  assert.equal(bridge.queue[0].sessionMode, 'create');
+  const saved = readCursorSessionRegistry(bridge.sessionFile);
+  assert.equal(saved.sessions[first.sessionId].agentId, job.agentId);
+  assert.equal(saved.sessions[first.sessionId].state, 'ready');
+  assert.equal(saved.sessions[second.sessionId].agentId, null);
+});
+
 test('a saved SSH binding requires verification again in each new adapter', async t => {
   const { bridge, root } = fixture(t);
   await bridge.initializeSshWorkspace(uri);
@@ -139,7 +160,7 @@ test('the pinned CDP target is not silently replaced after a window closes', asy
   const { bridge } = fixture(t);
   await bridge.initializeSshWorkspace(uri);
   bridge.pages = [pageFor(uri, 'replacement')];
-  await assert.rejects(bridge._ensureSshWorkspace(), /SSH_WORKSPACE_NOT_FOUND/);
+  await assert.rejects(bridge._ensureSshWorkspace(), /SSH_TARGET_NOT_FOUND/);
   assert.equal(bridge._lastLifecycle.targetId, 'ssh-target');
 });
 

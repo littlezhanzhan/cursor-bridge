@@ -4,6 +4,24 @@ All notable changes to Cursor Bridge are documented here.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [6.0.9-ssh.4] - 2026-10-28
+
+- Distinguish SSH CDP enumeration, stale pinned targets, unreadable identity,
+  failed probes, UI classification and actual workspace mismatches. MCP errors
+  expose structured per-target diagnostics without weakening exact host/path
+  checks or implying that a previously submitted task was never sent.
+- Classify modern classic IDE composers through native history adapters and
+  visible structural evidence. Prompt CSS alone no longer implies Agents v2;
+  conflicting evidence remains unknown and cannot establish an SSH binding.
+- Hit-test New Agent controls before clicking. Dismiss one known transient menu
+  with Escape and re-read the target; never click through dialogs or blockers.
+- Validation: 545 isolated regression tests and the 12-tool MCP smoke passed.
+  In an existing SSH IDE window, two distinct Agents returned completed replies;
+  the second was submitted from a fresh MCP process and its file metadata matched
+  an independent strict-SSH check. All original history IDs and the named
+  connection's default session were retained. The earlier generic `found 0`
+  transient state was not captured, so its exact original cause is unconfirmed.
+
 ## [6.0.9] - 2026-10-09
 
 ### Fixed

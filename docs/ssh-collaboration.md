@@ -1,4 +1,20 @@
-# Experimental SSH collaboration — 6.0.9-ssh.3
+# Experimental SSH collaboration — 6.0.9-ssh.4
+
+`6.0.9-ssh.4` distinguishes CDP enumeration, missing pinned targets, unreadable
+window identity, UI classification and actual workspace mismatches. Failures
+include structured `sshDiagnostic` evidence; a failed
+probe is no longer reported as a missing workspace. Modern prompt CSS alone
+does not identify Agents v2. Classic unified services and visible structural
+evidence classify the page, with conflicting evidence rejected as unknown.
+The exact SSH authority, case-sensitive folder and composer checks still apply.
+New Agent controls must also pass a foreground hit test. A known transient
+menu may be dismissed once with Escape, followed by a fresh hit test; ordinary
+dialogs, ambiguous controls and other blockers cannot authorize a click.
+
+The bundled CCE routing hooks are optional and are not required for SSH named
+connections. Keep them disabled for this workflow: their `cursor_context_engine`
+route is for local projects, while SSH requests use `cursor_ssh_session` or
+`cursor_connection_send`.
 
 `6.0.9-ssh.3` also recognizes Cursor's two host-only SSH authority forms:
 `ssh-remote+alias` and hex-encoded JSON containing only `hostName`. The comparison

@@ -24576,8 +24576,172 @@ function createUnifiedHistoryAdapter(document) {
   return { kind: "legacy", implementation: "unified-services", entries, open: open2 };
 }
 
+// page-ui-flavor.mjs
+function classifyCursorUiFlavor(document, { adapterKind = "none" } = {}) {
+  const isVisible = (node2) => !!(node2 && (node2.offsetParent !== null || typeof node2.getClientRects === "function" && node2.getClientRects().length > 0));
+  const visibleCount = (selector) => {
+    if (!document || typeof document.querySelectorAll !== "function") return 0;
+    try {
+      return [...document.querySelectorAll(selector)].filter(isVisible).length;
+    } catch {
+      return 0;
+    }
+  };
+  const nativeAdapterKind = typeof adapterKind === "string" && adapterKind.trim() ? adapterKind.trim().toLowerCase() : "none";
+  const visibleV2SidebarCount = visibleCount(".glass-sidebar-agent-list-container");
+  const visibleLegacyInputCount = visibleCount(".aislash-editor-input");
+  const visibleLegacyHistoryCount = visibleCount(
+    ".compact-agent-history-react-menu-label,.compact-agent-history-react-menu-content"
+  );
+  const visibleModernInputCount = visibleCount(
+    '[contenteditable="true"].ui-prompt-input-editor__input,.tiptap.ProseMirror[contenteditable="true"]'
+  );
+  const adapterIsV2 = nativeAdapterKind === "agents_v2";
+  const adapterIsLegacy = ["legacy", "unified", "unified_history"].includes(nativeAdapterKind);
+  const hasV2Evidence = visibleV2SidebarCount > 0 || adapterIsV2;
+  const hasClassicEvidence = visibleLegacyInputCount > 0 || visibleLegacyHistoryCount > 0 || adapterIsLegacy;
+  const conflict = hasV2Evidence && hasClassicEvidence;
+  let uiFlavor = "unknown";
+  let agentAdapterKind = "none";
+  if (!conflict && hasV2Evidence) {
+    uiFlavor = "agents_v2";
+    agentAdapterKind = "agents_v2";
+  } else if (!conflict && hasClassicEvidence) {
+    uiFlavor = "legacy";
+    agentAdapterKind = "legacy";
+  }
+  return {
+    uiFlavor,
+    agentAdapterKind,
+    uiEvidence: {
+      adapterKind: nativeAdapterKind,
+      visibleV2SidebarCount,
+      visibleLegacyInputCount,
+      visibleLegacyHistoryCount,
+      visibleModernInputCount,
+      hasV2Evidence,
+      hasClassicEvidence,
+      conflict
+    }
+  };
+}
+
+// new-agent-target.mjs
+function locateNewAgentTarget(document) {
+  const candidateSelector = 'button,[role="button"],a.action-label,.codicon';
+  const clickableSelector = 'button,[role="button"],a.action-label';
+  const excludedSelector = ".glass-sidebar-agent-menu-btn,.markdown-root,.composer-messages-container,.composer-react-transcript-root";
+  const visible = (node2) => !!(node2 && (node2.offsetParent !== null || typeof node2.getClientRects === "function" && node2.getClientRects().length > 0));
+  const matches = (node2, selector) => {
+    try {
+      return !!(node2 && typeof node2.matches === "function" && node2.matches(selector));
+    } catch {
+      return false;
+    }
+  };
+  const closest = (node2, selector) => {
+    for (let current = node2, depth = 0; current && depth < 64; current = current.parentElement, depth++) {
+      if (matches(current, selector)) return current;
+    }
+    return null;
+  };
+  const isDisabled = (control) => {
+    if (control.disabled === true) return true;
+    try {
+      if (control.getAttribute?.("disabled") !== null) return true;
+      return String(control.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
+    } catch {
+      return true;
+    }
+  };
+  const hasNewActionLabel = (control) => {
+    let values = [];
+    try {
+      values = [
+        control.getAttribute?.("aria-label"),
+        control.getAttribute?.("title"),
+        control.innerText,
+        control.textContent
+      ].filter((value) => typeof value === "string" && value.trim());
+    } catch {
+      return false;
+    }
+    return values.some((value) => {
+      const firstLine = value.replace(/\r/g, "").split("\n")[0].trim();
+      return /^New\s+(?:Agent|Chat)(?:\b|\s|\(|$)/i.test(firstLine);
+    });
+  };
+  const containsNode = (ancestor, node2) => {
+    for (let current = node2, depth = 0; current && depth < 64; current = current.parentElement, depth++) {
+      if (current === ancestor) return true;
+    }
+    return false;
+  };
+  const menuOverlayAt = (node2) => {
+    for (let current = node2, depth = 0; current && depth < 64; current = current.parentElement, depth++) {
+      try {
+        const component = current.getAttribute?.("data-component");
+        if (component === "menu-backdrop" || component === "menu-popup") return true;
+      } catch {
+      }
+    }
+    return false;
+  };
+  if (!document || typeof document.querySelectorAll !== "function") return { state: "missing" };
+  let nodes;
+  try {
+    nodes = [...document.querySelectorAll(candidateSelector)];
+  } catch {
+    return { state: "missing" };
+  }
+  const candidates = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const node2 of nodes) {
+    const control = matches(node2, clickableSelector) ? node2 : closest(node2, clickableSelector);
+    if (!control || seen.has(control)) continue;
+    seen.add(control);
+    if (!visible(control) || isDisabled(control)) continue;
+    if (closest(control, excludedSelector)) continue;
+    if (!hasNewActionLabel(control)) continue;
+    candidates.push(control);
+  }
+  if (!candidates.length) return { state: "missing" };
+  if (typeof document.elementFromPoint !== "function") {
+    return { state: "blocked", reason: "hit_test_unavailable" };
+  }
+  const ready = [];
+  const blockers = [];
+  for (const control of candidates) {
+    let rect;
+    let hit;
+    try {
+      rect = control.getBoundingClientRect();
+      const left = Number(rect?.left ?? rect?.x);
+      const top = Number(rect?.top ?? rect?.y);
+      const width = Number(rect?.width);
+      const height = Number(rect?.height);
+      if (![left, top, width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
+        blockers.push({ kind: "blocked" });
+        continue;
+      }
+      const x = Math.round(left + width / 2);
+      const y = Math.round(top + height / 2);
+      hit = document.elementFromPoint(x, y);
+      if (containsNode(control, hit)) ready.push({ state: "ready", x, y });
+      else blockers.push({ kind: menuOverlayAt(hit) ? "blocked_by_menu" : "blocked" });
+    } catch {
+      blockers.push({ kind: "blocked" });
+    }
+  }
+  if (ready.length > 1) return { state: "ambiguous" };
+  if (ready.length === 1) return ready[0];
+  if (candidates.length > 1) return { state: "ambiguous" };
+  if (blockers[0]?.kind === "blocked_by_menu") return { state: "blocked_by_menu" };
+  return { state: "blocked" };
+}
+
 // server.mjs
-var PLUGIN_VERSION = "6.0.9-ssh.3";
+var PLUGIN_VERSION = "6.0.9-ssh.4";
 var CDP_PORT2 = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 var ORIGIN = `http://localhost:${CDP_PORT2}`;
 var QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 3e5);
@@ -25069,7 +25233,7 @@ function exprClickBoundComposerStop(agentId) {
     return JSON.stringify({clicked:false,state:buttons.length?'ambiguous_stop_controls':'stop_control_missing',count:buttons.length,composerId:composer.dataset.composerId});
   })()`;
 }
-var EXPR_FIND_NEWAGENT = `(function(){const b=[...document.querySelectorAll('button,[role=button],a.action-label,.codicon')].find(e=>{if(e.offsetParent===null||e.closest('.glass-sidebar-agent-menu-btn'))return false;const s=(e.getAttribute('aria-label')||'')+' '+(e.getAttribute('title')||'')+' '+(e.innerText||'');return /(?:^|\\s)New (?:Agent|Chat)(?:\\s|$)/i.test(s);});if(!b)return '';const r=b.getBoundingClientRect();return JSON.stringify({x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)});})()`;
+var EXPR_FIND_NEWAGENT = `JSON.stringify((${locateNewAgentTarget.toString()})(document))`;
 var MODEL_PICKER_VISIBLE_BODY = `
   ${INPUT_PICKER_BODY}
   const visible=(node)=>!!(node&&(node.offsetParent!==null||(node.getClientRects&&node.getClientRects().length>0)));
@@ -25890,15 +26054,13 @@ var EXPR_VISIBLE_COMPOSER = `(function(){
 })()`;
 var EXPR_AGENT_ADAPTER_READY = `(function(){${REACT_ADAPTER_BODY}return !!a;})()`;
 var EXPR_PAGE_CAPABILITIES = `(function(){${INPUT_PICKER_BODY}
+  ${REACT_ADAPTER_BODY}
   const visible=node=>!!(node&&(node.offsetParent!==null||(typeof node.getClientRects==='function'&&node.getClientRects().length>0)));
   const label=node=>String(node&&(node.getAttribute&&(
     node.getAttribute('aria-label')||node.getAttribute('title'))||node.innerText||node.textContent)||'').replace(/\\s+/g,' ').trim();
   const input=pickInput();
   const inputCandidateCount=[...document.querySelectorAll(${JSON.stringify(CURSOR_INPUT_SELECTOR)})].filter(visible).length;
-  const hasV2Sidebar=!!document.querySelector('.glass-sidebar-agent-list-container');
-  const hasLegacyInput=!!document.querySelector('.aislash-editor-input');
-  const hasLegacyHistory=!!document.querySelector('.compact-agent-history-react-menu-label')||
-    [...document.querySelectorAll('button,[role=button],a.action-label,.codicon')].some(e=>/Show Chat History|Chat History|Agent History/i.test((e.getAttribute('aria-label')||'')+' '+(e.getAttribute('title')||'')));
+  const ui=(${classifyCursorUiFlavor.toString()})(document,{adapterKind:a?a.kind:'none'});
   const dialogs=[...document.querySelectorAll('[role="dialog"],dialog[open],.monaco-dialog-box,.quick-input-widget')]
     .filter(visible).filter(node=>node.getAttribute('data-component')!=='preview-card-layer-popup');
   const dialog=dialogs[dialogs.length-1]||null;
@@ -25918,11 +26080,9 @@ var EXPR_PAGE_CAPABILITIES = `(function(){${INPUT_PICKER_BODY}
   const signInControlVisible=authControls.some(node=>signInPattern.test(label(node)));
   const signInVisible=authControls.some(node=>signInPattern.test(label(node))&&!node.closest(configurationSelector));
   const composerCount=[...document.querySelectorAll('.composer-bar[data-composer-id],.composer-bar,.ui-prompt-input-root')].filter(visible).length;
-  const agentSurfaceVisible=composerCount>0||[...document.querySelectorAll('.glass-sidebar-agent-list-container,.compact-agent-history-react-menu-label,.aichat-container')].some(visible)||authControls.some(node=>/(?:New (?:Agent|Chat)|(?:Chat|Agent) History)/i.test(label(node)));
-  const uiFlavor=hasV2Sidebar||(input&&input.classList&&input.classList.contains('ui-prompt-input-editor__input'))?'agents_v2':hasLegacyInput?'legacy':'unknown';
+  const agentSurfaceVisible=!!a||composerCount>0||[...document.querySelectorAll('.glass-sidebar-agent-list-container,.compact-agent-history-react-menu-label,.aichat-container')].some(visible)||authControls.some(node=>/(?:New (?:Agent|Chat)|(?:Chat|Agent) History)/i.test(label(node)));
   return JSON.stringify({
-    hasWritableInput:!!input,inputCandidateCount,uiFlavor,
-    agentAdapterKind:hasV2Sidebar?'agents_v2':hasLegacyHistory?'legacy':'none',
+    hasWritableInput:!!input,inputCandidateCount,...ui,
     hasComposer:!!document.querySelector('.composer-bar[data-composer-id]'),
     modalVisible:!!dialog,modalLabel:dialogLabel,
     settingsOrCustomizeVisible,signInControlVisible,signInVisible,agentSurfaceVisible,composerCount,
@@ -26645,33 +26805,115 @@ var CursorBridge = class {
   async _listSshPages() {
     return (await httpJson("/json/list")).filter((page) => page.type === "page" && page.webSocketDebuggerUrl);
   }
-  async _inspectSshPage(page, workspace) {
-    const c = makeClient2(page.webSocketDebuggerUrl);
+  async _inspectSshPage(page, workspace, { createClient = makeClient2 } = {}) {
+    let c;
+    let stage = "connect";
+    let identityVerified = false;
     try {
+      c = createClient(page.webSocketDebuggerUrl);
       await c.ready;
+      stage = "identity";
       const identity = inspectSshWindowIdentity(await evalJS(c, EXPR_SSH_WINDOW_IDENTITY, { timeoutMs: 5e3 }), workspace);
-      if (!identity.ok) return identity;
-      const capabilities = JSON.parse(await evalJS(c, EXPR_PAGE_CAPABILITIES, { timeoutMs: 5e3 }) || "{}");
-      if (capabilities.uiFlavor !== "legacy") return { ok: false, reason: "SSH_CLASSIC_IDE_REQUIRED" };
+      if (!identity.ok) return { ...identity, stage };
+      identityVerified = true;
+      stage = "capabilities";
+      const capabilities = JSON.parse(await evalJS(c, EXPR_PAGE_CAPABILITIES, { timeoutMs: 5e3 }));
+      if (!capabilities || typeof capabilities !== "object" || Array.isArray(capabilities) || !["legacy", "agents_v2", "unknown"].includes(capabilities.uiFlavor)) {
+        throw cursorSessionError("SSH_CAPABILITIES_INVALID", "The page capability probe returned an invalid payload");
+      }
+      if (capabilities.uiFlavor !== "legacy") return {
+        ok: false,
+        reason: "SSH_CLASSIC_IDE_REQUIRED",
+        stage: "ui-classification",
+        identityVerified: true,
+        capabilities
+      };
       return { ...identity, capabilities };
+    } catch (error2) {
+      return {
+        ok: false,
+        reason: "SSH_PAGE_PROBE_FAILED",
+        stage,
+        identityVerified,
+        probeError: {
+          code: error2.code || error2.name || "SSH_PAGE_PROBE_ERROR",
+          message: String(error2.message || error2).slice(0, 500),
+          ...error2.cdp ? { cdp: error2.cdp } : {}
+        }
+      };
     } finally {
-      c.close();
+      c?.close();
     }
   }
   async _findSshWorkspace(workspace, targetId = "") {
-    const pages = await this._listSshPages();
+    const diagnostic = { probeReadOnly: true, targetId: targetId || null, pageCount: 0, candidateCount: 0, matchingCount: 0, rejections: [] };
+    const fail = (code, message) => {
+      const error2 = cursorSessionError(code, message);
+      error2.sshDiagnostic = diagnostic;
+      throw error2;
+    };
+    let pages;
+    try {
+      pages = await this._listSshPages();
+    } catch (error2) {
+      diagnostic.stage = "page-enumeration";
+      diagnostic.probeError = {
+        code: error2.code || error2.name || "CDP_LIST_ERROR",
+        message: String(error2.message || error2).slice(0, 500)
+      };
+      fail("SSH_PAGE_ENUMERATION_FAILED", "Cannot enumerate Cursor CDP targets; check the debug-port connection before retrying.");
+    }
+    diagnostic.pageCount = pages.length;
+    const candidates = targetId ? pages.filter((page) => page.id === targetId) : pages;
+    diagnostic.candidateCount = candidates.length;
+    if (targetId && !candidates.length) {
+      diagnostic.stage = "target-selection";
+      fail("SSH_TARGET_NOT_FOUND", "The bound Cursor target is no longer present; run cursor_ssh_init to explicitly select an open SSH window.");
+    }
     const matches = [];
-    for (const page of targetId ? pages.filter((page2) => page2.id === targetId) : pages) {
+    for (const page of candidates) {
       try {
         const identity = await this._inspectSshPage(page, workspace);
         if (identity.ok) matches.push({ page, identity });
-      } catch {
+        else diagnostic.rejections.push({
+          targetId: page.id,
+          stage: identity.stage || "identity",
+          reason: identity.reason || "SSH_IDENTITY_UNAVAILABLE",
+          identityVerified: identity.identityVerified === true,
+          ...identity.capabilities ? {
+            uiFlavor: identity.capabilities.uiFlavor,
+            agentAdapterKind: identity.capabilities.agentAdapterKind,
+            uiEvidence: identity.capabilities.uiEvidence
+          } : {},
+          ...identity.probeError ? { probeError: identity.probeError } : {}
+        });
+      } catch (error2) {
+        diagnostic.rejections.push({
+          targetId: page.id,
+          stage: "page-inspection",
+          reason: "SSH_PAGE_PROBE_FAILED",
+          probeError: {
+            code: error2.code || error2.name || "SSH_PAGE_PROBE_ERROR",
+            message: String(error2.message || error2).slice(0, 500)
+          }
+        });
       }
     }
-    if (matches.length !== 1) throw cursorSessionError(
-      matches.length > 1 ? "SSH_WORKSPACE_AMBIGUOUS" : "SSH_WORKSPACE_NOT_FOUND",
-      `Expected one already-open classic Cursor IDE window for ${workspace.uri}; found ${matches.length}. Open that SSH folder with CDP enabled, or specify its exact target_id.`
-    );
+    diagnostic.matchingCount = matches.length;
+    if (matches.length > 1) fail("SSH_WORKSPACE_AMBIGUOUS", `Found ${matches.length} verified Cursor windows for ${workspace.uri}; specify the exact target_id.`);
+    if (!matches.length) {
+      const rejected = diagnostic.rejections;
+      if (rejected.some((item) => item.reason === "SSH_PAGE_PROBE_FAILED")) {
+        fail("SSH_PAGE_PROBE_FAILED", "Cursor targets exist but a CDP connection or page probe failed; inspect sshDiagnostic before retrying.");
+      }
+      if (rejected.some((item) => item.reason === "SSH_CLASSIC_IDE_REQUIRED")) {
+        fail("SSH_CLASSIC_IDE_REQUIRED", "The SSH identity matches, but a classic Cursor IDE surface could not be confirmed; inspect sshDiagnostic.");
+      }
+      if (rejected.some((item) => !["remote_authority_mismatch", "folder_uri_authority_mismatch", "folder_uri_path_mismatch"].includes(item.reason))) {
+        fail("SSH_WINDOW_IDENTITY_UNAVAILABLE", "Cursor targets exist, but their SSH folder identity could not be verified; inspect sshDiagnostic.");
+      }
+      fail("SSH_WORKSPACE_NOT_FOUND", `No verified open Cursor window matches ${workspace.uri}; inspect sshDiagnostic or specify its exact target_id.`);
+    }
     return matches[0];
   }
   async initializeSshWorkspace(workspace, { targetId = "" } = {}) {
@@ -28243,15 +28485,23 @@ var CursorBridge = class {
   }
   async _clickNewAgent(c, replaceCurrent) {
     try {
-      const pos = await evalJS(c, EXPR_FIND_NEWAGENT);
-      if (!pos) return false;
-      const { x, y } = JSON.parse(pos);
+      let target = JSON.parse(await evalJS(c, EXPR_FIND_NEWAGENT) || "{}");
+      if (target.state === "blocked_by_menu") {
+        if (isSshWorkspaceUri(this.projectPath)) await this._verifySshWorkspace(c, {}, "before_menu_dismiss");
+        await chord(c, 0, "Escape", "Escape", 27);
+        await sleep2(200);
+        target = JSON.parse(await evalJS(c, EXPR_FIND_NEWAGENT) || "{}");
+      }
+      if (target.state !== "ready" || !Number.isFinite(target.x) || !Number.isFinite(target.y)) return false;
+      if (isSshWorkspaceUri(this.projectPath)) await this._verifySshWorkspace(c, {}, "before_new_agent_click");
+      const { x, y } = target;
       const modifiers = replaceCurrent ? 1 : 0;
       await c.send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1, modifiers });
       await c.send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1, modifiers });
       await sleep2(1100);
       return true;
-    } catch {
+    } catch (error2) {
+      if (isSshWorkspaceUri(this.projectPath)) throw error2;
       return false;
     }
   }
@@ -30119,14 +30369,15 @@ async function ensureBridgeCursor(targetBridge, reason) {
 }
 function toolErrorResult(error2) {
   const message = error2 instanceof Error ? error2.message : String(error2);
-  if (error2 && (error2.uiDiagnostic || error2.modelSelection || error2.pickerRead || error2.cdp || error2.workspaceRecovery)) {
+  if (error2 && (error2.uiDiagnostic || error2.modelSelection || error2.pickerRead || error2.cdp || error2.workspaceRecovery || error2.sshDiagnostic)) {
     const payload = {
       error: { code: error2.code || error2.uiDiagnostic?.code || "CURSOR_BRIDGE_ERROR", message },
       ...error2.uiDiagnostic ? { uiDiagnostic: error2.uiDiagnostic } : {},
       ...error2.modelSelection ? { modelSelection: error2.modelSelection } : {},
       ...error2.pickerRead ? { pickerRead: error2.pickerRead } : {},
       ...error2.cdp ? { cdp: error2.cdp } : {},
-      ...error2.workspaceRecovery ? { workspaceRecovery: error2.workspaceRecovery } : {}
+      ...error2.workspaceRecovery ? { workspaceRecovery: error2.workspaceRecovery } : {},
+      ...error2.sshDiagnostic ? { sshDiagnostic: error2.sshDiagnostic } : {}
     };
     return {
       content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
