@@ -67,8 +67,9 @@ import { defaultLifecycleDir, ensureLifecycleDir } from './lifecycle-paths.mjs';
 import { isSshWorkspaceUri, parseSshWorkspace } from './remote-workspace.mjs';
 import { EXPR_SSH_WINDOW_IDENTITY, inspectSshWindowIdentity } from './ssh-window-identity.mjs';
 import { NamedConnectionController } from './connection-controller.mjs';
+import { createUnifiedHistoryAdapter } from './unified-history-adapter.mjs';
 
-const PLUGIN_VERSION = '6.0.9-ssh.2';
+const PLUGIN_VERSION = '6.0.9-ssh.3';
 const CDP_PORT = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 const ORIGIN = `http://localhost:${CDP_PORT}`;
 const QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 300000);
@@ -1280,6 +1281,7 @@ const EXPR_FIND_HISTORY = `(function(){const b=[...document.querySelectorAll('bu
 // 旧版 Agent History 提供 entries + onOpenEntry(id)；新版 Cursor Agents 的侧栏提供
 // section.headers + onSelectAgent(header)。两套不稳定 React 内部接口只在此处归一化。
 const REACT_ADAPTER_BODY = `
+  ${createUnifiedHistoryAdapter.toString()}
   const readScalar=value=>value&&typeof value==='object'&&'value' in value?value.value:value;
   const normalizeTimestamp=(value,index)=>{
     const raw=readScalar(value);
@@ -1449,6 +1451,8 @@ const REACT_ADAPTER_BODY = `
         }
       };
     }
+    const unified=createUnifiedHistoryAdapter(document);
+    if(unified)return unified;
     const legacy=findLegacyAdapter();
     if(!legacy)return null;
     return {
@@ -2415,6 +2419,16 @@ class CursorBridge {
     job.workspaceBindingChecks ||= {};
     job.workspaceBindingChecks[stage] = { ...identity, checkedAt: new Date().toISOString() };
     if (!identity.ok) throw cursorSessionError('SSH_WORKSPACE_MISMATCH', identity.reason || 'The SSH window identity changed');
+    const expectedAgentId = job.agentId || job.provisionalAgentId;
+    if (expectedAgentId && (stage === 'before_fill' || stage.startsWith('before_send') || stage === 'before_read_reply')) {
+      const composer = JSON.parse(await evalJS(c, EXPR_VISIBLE_COMPOSER) || '{}');
+      const id = value => String(value || '').replace(/^local:/, '').toLowerCase();
+      if (!composer.ok || id(composer.id) !== id(expectedAgentId)) {
+        const error = cursorSessionError('SSH_COMPOSER_MISMATCH', 'The visible composer is not the exact dedicated Agent; no prompt or reply may be read from another chat');
+        error.confirmedNotSent = stage === 'before_fill';
+        throw error;
+      }
+    }
     return identity;
   }
 
@@ -4252,6 +4266,8 @@ class CursorBridge {
       return { fallbackReason: `parallel_agent prerequisite is unavailable: ${e.message}` };
       }
       const previousSelectedId = (before.find((e) => e.isSelected) || {}).id || null;
+      const previousSshComposer = isSshWorkspaceUri(job.projectPath || this.projectPath)
+        ? JSON.parse(await evalJS(c, EXPR_VISIBLE_COMPOSER) || '{}') : null;
       this._throwIfCancelledBeforeSend(job);
       let createdForWorkspace = false;
       try {
@@ -4266,6 +4282,16 @@ class CursorBridge {
       }
       if (!createdForWorkspace) {
       return { fallbackReason: 'Cursor New Agent button was not found; downgraded to FIFO before submission' };
+      }
+
+      if (previousSshComposer) {
+        const current = JSON.parse(await evalJS(c, EXPR_VISIBLE_COMPOSER) || '{}');
+        if (!current.ok || !current.id || current.id === previousSshComposer.id || before.some(entry => entry.id === current.id)) {
+          const error = cursorSessionError('SSH_NEW_AGENT_NOT_CONFIRMED', 'New Agent did not produce a distinct composer in the bound window; the existing chat was not sent a prompt');
+          error.confirmedNotSent = true;
+          throw error;
+        }
+        job.provisionalAgentId = current.id;
       }
 
       let provisionalAgent = null;
@@ -4457,7 +4483,7 @@ class CursorBridge {
             entry = promoted;
           }
         }
-        if (entry && entry.registeredBySectionMap && classifyParallelTerminalIcon(entry.icon) === 'unknown') {
+        if (entry && (entry.registeredBySectionMap || entry.statusRequiresSelection) && classifyParallelTerminalIcon(entry.icon) === 'unknown') {
           const opened = await evalJS(c, exprOpenAgent(job.agentId));
           if (opened === 'OPENED') {
             await sleep(350);

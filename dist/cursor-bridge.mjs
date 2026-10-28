@@ -11337,6 +11337,35 @@ var init_lifecycle_paths = __esm({
 });
 
 // remote-workspace.mjs
+import { Buffer as Buffer2 } from "node:buffer";
+function hostOnlyAuthorityAlias(authority) {
+  const match = typeof authority === "string" && authority.match(SSH_AUTHORITY);
+  if (!match) return null;
+  const suffix = match[1];
+  if (suffix.length <= 4096 && suffix.length % 2 === 0 && /^[0-9a-f]+$/i.test(suffix)) {
+    let decoded;
+    try {
+      decoded = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer2.from(suffix, "hex")));
+    } catch {
+      return suffix;
+    }
+    if (decoded && typeof decoded === "object" && !Array.isArray(decoded)) {
+      const keys = Object.keys(decoded);
+      if (keys.length !== 1 || keys[0] !== "hostName" || typeof decoded.hostName !== "string" || !SSH_AUTHORITY.test(`ssh-remote+${decoded.hostName}`)) return null;
+      return decoded.hostName;
+    }
+    return suffix;
+  }
+  return suffix;
+}
+function sameSshAuthority(left, right) {
+  if (typeof left !== "string" || typeof right !== "string") return false;
+  if (!SSH_AUTHORITY.test(left) || !SSH_AUTHORITY.test(right)) return false;
+  if (left === right) return true;
+  const a = hostOnlyAuthorityAlias(left);
+  const b = hostOnlyAuthorityAlias(right);
+  return a !== null && b !== null && a === b;
+}
 function invalid(message) {
   throw new TypeError(`Invalid SSH workspace URI: ${message}`);
 }
@@ -23780,7 +23809,7 @@ function inspectSshWindowIdentity(raw, expectedWorkspace) {
   const identity = parsedIdentity.value;
   const remoteAuthority = typeof identity.remoteAuthority === "string" && identity.remoteAuthority.length ? identity.remoteAuthority : null;
   if (!remoteAuthority) return failure2("remote_authority_missing");
-  if (remoteAuthority !== expected.authority) return failure2("remote_authority_mismatch", remoteAuthority);
+  if (!sameSshAuthority(remoteAuthority, expected.authority)) return failure2("remote_authority_mismatch", remoteAuthority);
   if (identity.workspace && typeof identity.workspace === "object") {
     return failure2("workspace_roots_unresolved", remoteAuthority);
   }
@@ -23790,9 +23819,14 @@ function inspectSshWindowIdentity(raw, expectedWorkspace) {
   const parsedFolder = parseFolderUri(identity.folderUri);
   if (parsedFolder.error) return failure2(parsedFolder.error, remoteAuthority);
   const folder = parsedFolder.value;
-  if (folder.authority !== expected.authority) return failure2("folder_uri_authority_mismatch", remoteAuthority);
+  if (!sameSshAuthority(folder.authority, expected.authority)) return failure2("folder_uri_authority_mismatch", remoteAuthority);
   if (folder.remotePath !== expected.remotePath) return failure2("folder_uri_path_mismatch", remoteAuthority);
-  return { ok: true, workspace: expected, remoteAuthority };
+  return {
+    ok: true,
+    workspace: expected,
+    remoteAuthority,
+    ...remoteAuthority !== expected.authority ? { authorityMatch: "host-only-encoding-equivalent" } : {}
+  };
 }
 
 // connection-controller.mjs
@@ -24231,8 +24265,319 @@ var NamedConnectionController = class {
   }
 };
 
+// unified-history-adapter.mjs
+function createUnifiedHistoryAdapter(document) {
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const SEED_SELECTOR = ".unified-agents-sidebar .ui-agent-status-dot";
+  const COMPOSER_SELECTOR = ".composer-bar[data-composer-id]";
+  function asId(value) {
+    if (value && typeof value === "object" && "value" in value) value = value.value;
+    if (typeof value !== "string") return null;
+    let raw = value;
+    if (/^local:/i.test(raw)) raw = raw.slice(6);
+    if (!UUID.test(raw)) return null;
+    return raw.toLowerCase();
+  }
+  function serviceName(key) {
+    try {
+      if (typeof key === "string") return key;
+      if (typeof key === "symbol") return key.description || "";
+      if (typeof key?.id === "string") return key.id;
+      if (typeof key?.toString === "function") {
+        const name = key.toString();
+        if (typeof name === "string" && name !== "[object Object]") return name;
+      }
+    } catch {
+    }
+    return "";
+  }
+  function servicePairs(entries2) {
+    if (!entries2) return [];
+    try {
+      if (Array.isArray(entries2)) {
+        return entries2.filter((entry) => Array.isArray(entry) && entry.length >= 2);
+      }
+      if (typeof entries2[Symbol.iterator] === "function") {
+        const result = [];
+        for (const entry of entries2) {
+          if (Array.isArray(entry) && entry.length >= 2) result.push(entry);
+        }
+        return result;
+      }
+      if (typeof entries2 === "object") return Object.entries(entries2);
+    } catch {
+    }
+    return [];
+  }
+  function findService(instantiationService, id, predicate) {
+    const seen = /* @__PURE__ */ new Set();
+    let current = instantiationService;
+    for (let depth = 0; current && depth < 64 && !seen.has(current); depth++) {
+      seen.add(current);
+      const pairs = servicePairs(current._services?._entries);
+      const matches = pairs.filter(([key]) => serviceName(key) === id);
+      if (matches.length > 1) return null;
+      if (matches.length === 1) {
+        const value = matches[0][1];
+        return predicate(value) ? value : null;
+      }
+      current = current._parent;
+    }
+    return null;
+  }
+  function isDataService(value) {
+    return !!value && typeof value === "object" && !!value.allComposersData && typeof value.allComposersData === "object" && typeof value.whenInitialComposerDataLoaded === "function";
+  }
+  function isViewsService(value, data2) {
+    return !!value && typeof value === "object" && value.composerDataService === data2 && typeof value.getEditorGroupForComposer === "function";
+  }
+  function isLayoutService(value) {
+    return !!value && typeof value === "object" && typeof value.openComposer === "function";
+  }
+  function serviceBundle(scope) {
+    if (!scope || typeof scope !== "object" || !scope.instantiationService || !scope.workspaceContextService) return null;
+    const data2 = findService(scope.instantiationService, "composerDataService", isDataService);
+    if (!data2 || data2._workspaceContextService !== scope.workspaceContextService) return null;
+    const views2 = findService(scope.instantiationService, "composerViewsService", (value) => isViewsService(value, data2));
+    const layout2 = findService(scope.instantiationService, "agentLayoutService", isLayoutService);
+    if (!views2 || !layout2) return null;
+    return { data: data2, views: views2, layout: layout2, workspaceContextService: scope.workspaceContextService };
+  }
+  function addScope(value, scopes) {
+    if (!value || typeof value !== "object") return;
+    const workspace = value.workspace;
+    if (workspace && typeof workspace === "object" && workspace.instantiationService && workspace.workspaceContextService) {
+      scopes.push(workspace);
+    }
+    if (value.instantiationService && value.workspaceContextService) scopes.push(value);
+  }
+  function collectScopes() {
+    if (!document || typeof document.querySelectorAll !== "function") return [];
+    let seeds;
+    try {
+      seeds = document.querySelectorAll(SEED_SELECTOR);
+    } catch {
+      return [];
+    }
+    const scopes = [];
+    for (const seed of seeds || []) {
+      let names = [];
+      try {
+        names = Object.getOwnPropertyNames(seed);
+      } catch {
+      }
+      for (const name of names) {
+        if (!name.startsWith("__reactFiber$")) continue;
+        let fiber;
+        try {
+          fiber = seed[name];
+        } catch {
+          continue;
+        }
+        const seenFibers = /* @__PURE__ */ new Set();
+        for (let depth = 0; fiber && depth < 128 && !seenFibers.has(fiber); depth++) {
+          seenFibers.add(fiber);
+          try {
+            addScope(fiber.memoizedProps?.value, scopes);
+          } catch {
+          }
+          let dependency;
+          try {
+            dependency = fiber.dependencies?.firstContext;
+          } catch {
+          }
+          const seenDependencies = /* @__PURE__ */ new Set();
+          for (let index = 0; dependency && index < 64 && !seenDependencies.has(dependency); index++) {
+            seenDependencies.add(dependency);
+            try {
+              addScope(dependency.memoizedValue, scopes);
+            } catch {
+            }
+            dependency = dependency.next;
+          }
+          try {
+            fiber = fiber.return;
+          } catch {
+            fiber = null;
+          }
+        }
+      }
+    }
+    return scopes;
+  }
+  const bundles = [];
+  for (const scope of collectScopes()) {
+    const bundle = serviceBundle(scope);
+    if (!bundle) continue;
+    if (!bundles.some((existing) => existing.data === bundle.data && existing.views === bundle.views && existing.layout === bundle.layout && existing.workspaceContextService === bundle.workspaceContextService)) {
+      bundles.push(bundle);
+    }
+  }
+  if (bundles.length !== 1) return null;
+  const { data, views, layout } = bundles[0];
+  function excluded(header) {
+    try {
+      return !!(header?.isEphemeral || header?.isSpec || header?.isBestOfNSubcomposer || header?.isSubagent || header?.subagentInfo || header?.subagentParentComposerId || header?.parentComposerId);
+    } catch {
+      return true;
+    }
+  }
+  function headerRows() {
+    let headers;
+    try {
+      headers = data.allComposersData.allComposers;
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(headers)) return [];
+    const rows = [];
+    const counts = /* @__PURE__ */ new Map();
+    for (const header of headers) {
+      if (!header || typeof header !== "object") continue;
+      let rawId;
+      try {
+        rawId = header.composerId && typeof header.composerId === "object" && "value" in header.composerId ? header.composerId.value : header.composerId;
+      } catch {
+        continue;
+      }
+      const normalizedId = asId(rawId);
+      if (!normalizedId) continue;
+      counts.set(normalizedId, (counts.get(normalizedId) || 0) + 1);
+      rows.push({ header, rawId, normalizedId });
+    }
+    return rows.filter((row) => counts.get(row.normalizedId) === 1 && !excluded(row.header));
+  }
+  function isVisible(element) {
+    if (!element || element.isConnected === false) return false;
+    try {
+      if (typeof element.getClientRects === "function") return element.getClientRects().length > 0;
+      if ("offsetParent" in element) return element.offsetParent !== null;
+    } catch {
+      return false;
+    }
+    return true;
+  }
+  function visibleComposerInfo() {
+    const ids = /* @__PURE__ */ new Set();
+    const states = /* @__PURE__ */ new Map();
+    let visibleCount = 0;
+    let bars = [];
+    try {
+      bars = document.querySelectorAll(COMPOSER_SELECTOR);
+    } catch {
+    }
+    for (const bar of bars || []) {
+      if (!isVisible(bar)) continue;
+      let rawId;
+      let rawStatus;
+      try {
+        rawId = bar.dataset?.composerId ?? bar.getAttribute?.("data-composer-id");
+        rawStatus = bar.dataset?.composerStatus ?? bar.getAttribute?.("data-composer-status");
+      } catch {
+        continue;
+      }
+      const id = asId(rawId);
+      if (!id) continue;
+      visibleCount++;
+      ids.add(id);
+      const values = states.get(id) || [];
+      values.push(typeof rawStatus === "string" ? rawStatus.toLowerCase() : "");
+      states.set(id, values);
+    }
+    const visibleSelectedId = visibleCount === 1 && ids.size === 1 ? [...ids][0] : null;
+    let selectedId = visibleSelectedId;
+    if (!selectedId) {
+      try {
+        selectedId = asId(data.selectedComposerId);
+      } catch {
+      }
+    }
+    if (!selectedId) {
+      try {
+        const values = data.allComposersData.selectedComposerIds;
+        const candidates = Array.isArray(values) ? values : values && typeof values[Symbol.iterator] === "function" ? [...values] : [];
+        const unique = new Set(candidates.map(asId).filter(Boolean));
+        if (unique.size === 1) selectedId = [...unique][0];
+      } catch {
+      }
+    }
+    return { selectedId, states };
+  }
+  function mapVisibleStatus(values) {
+    if (!Array.isArray(values) || values.length !== 1 || !values[0]) return null;
+    const status = values[0];
+    if (status === "generating") return { status, icon: "loading", showSpinner: true };
+    if (status === "completed") return { status, icon: "check-circled", showSpinner: false };
+    if (status === "cancelled") return { status, icon: "circle-slash", showSpinner: false };
+    if (status === "error" || status === "failed") return { status, icon: "warning", showSpinner: false };
+    return null;
+  }
+  function timestampOf(header, index) {
+    let value;
+    try {
+      value = header.lastUpdatedAt ?? header.createdAt;
+    } catch {
+    }
+    if (value && typeof value === "object" && "value" in value) value = value.value;
+    if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.getTime() : index;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && value.trim() !== "") return numeric;
+      const parsed = Date.parse(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return index;
+  }
+  function entries() {
+    const rows = headerRows();
+    const visible = visibleComposerInfo();
+    return rows.map(({ header, normalizedId }, index) => {
+      let isDraft = false;
+      try {
+        isDraft = !!header.isDraft;
+      } catch {
+      }
+      const status = isDraft ? null : mapVisibleStatus(visible.states.get(normalizedId));
+      return {
+        id: `local:${normalizedId}`,
+        label: "",
+        searchText: "",
+        timestamp: timestampOf(header, index),
+        isSelected: visible.selectedId === normalizedId,
+        showSpinner: status?.showSpinner === true,
+        icon: isDraft ? "draft" : status?.icon || "registered",
+        status: isDraft ? "draft" : status?.status ?? null,
+        durable: !isDraft,
+        statusRequiresSelection: !isDraft && !status
+      };
+    });
+  }
+  async function open2(id) {
+    const normalizedId = asId(id);
+    if (!normalizedId) return false;
+    const matches = headerRows().filter((row) => row.normalizedId === normalizedId);
+    if (matches.length !== 1) return false;
+    const rawId = matches[0].rawId;
+    try {
+      const targetGroup = views.getEditorGroupForComposer(rawId);
+      await layout.openComposer({
+        type: "local",
+        id: rawId,
+        openInNewTab: true,
+        transient: true,
+        targetGroup
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return { kind: "legacy", implementation: "unified-services", entries, open: open2 };
+}
+
 // server.mjs
-var PLUGIN_VERSION = "6.0.9-ssh.2";
+var PLUGIN_VERSION = "6.0.9-ssh.3";
 var CDP_PORT2 = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 var ORIGIN = `http://localhost:${CDP_PORT2}`;
 var QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 3e5);
@@ -25338,6 +25683,7 @@ function exprInspectAgentWorkspace(projectPath, options = {}) {
 var EXPR_HISTORY_OPEN = `(function(){return !![...document.querySelectorAll('.compact-agent-history-react-menu-label')].find(e=>e.offsetParent!==null);})()`;
 var EXPR_FIND_HISTORY = `(function(){const b=[...document.querySelectorAll('button,[role=button],a.action-label,.codicon')].find(e=>{if(e.offsetParent===null)return false;const s=(e.getAttribute('aria-label')||'')+' '+(e.getAttribute('title')||'');return /Show Chat History|Chat History|Agent History/i.test(s);});if(!b)return '';const r=b.getBoundingClientRect();return JSON.stringify({x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)});})()`;
 var REACT_ADAPTER_BODY = `
+  ${createUnifiedHistoryAdapter.toString()}
   const readScalar=value=>value&&typeof value==='object'&&'value' in value?value.value:value;
   const normalizeTimestamp=(value,index)=>{
     const raw=readScalar(value);
@@ -25507,6 +25853,8 @@ var REACT_ADAPTER_BODY = `
         }
       };
     }
+    const unified=createUnifiedHistoryAdapter(document);
+    if(unified)return unified;
     const legacy=findLegacyAdapter();
     if(!legacy)return null;
     return {
@@ -26387,6 +26735,16 @@ var CursorBridge = class {
     job.workspaceBindingChecks ||= {};
     job.workspaceBindingChecks[stage] = { ...identity, checkedAt: (/* @__PURE__ */ new Date()).toISOString() };
     if (!identity.ok) throw cursorSessionError("SSH_WORKSPACE_MISMATCH", identity.reason || "The SSH window identity changed");
+    const expectedAgentId = job.agentId || job.provisionalAgentId;
+    if (expectedAgentId && (stage === "before_fill" || stage.startsWith("before_send") || stage === "before_read_reply")) {
+      const composer = JSON.parse(await evalJS(c, EXPR_VISIBLE_COMPOSER) || "{}");
+      const id = (value) => String(value || "").replace(/^local:/, "").toLowerCase();
+      if (!composer.ok || id(composer.id) !== id(expectedAgentId)) {
+        const error2 = cursorSessionError("SSH_COMPOSER_MISMATCH", "The visible composer is not the exact dedicated Agent; no prompt or reply may be read from another chat");
+        error2.confirmedNotSent = stage === "before_fill";
+        throw error2;
+      }
+    }
     return identity;
   }
   async sshSessionTurn(prompt, options = {}) {
@@ -28140,6 +28498,7 @@ var CursorBridge = class {
         return { fallbackReason: `parallel_agent prerequisite is unavailable: ${e.message}` };
       }
       const previousSelectedId = (before.find((e) => e.isSelected) || {}).id || null;
+      const previousSshComposer = isSshWorkspaceUri(job.projectPath || this.projectPath) ? JSON.parse(await evalJS(c, EXPR_VISIBLE_COMPOSER) || "{}") : null;
       this._throwIfCancelledBeforeSend(job);
       let createdForWorkspace = false;
       try {
@@ -28152,6 +28511,15 @@ var CursorBridge = class {
       }
       if (!createdForWorkspace) {
         return { fallbackReason: "Cursor New Agent button was not found; downgraded to FIFO before submission" };
+      }
+      if (previousSshComposer) {
+        const current = JSON.parse(await evalJS(c, EXPR_VISIBLE_COMPOSER) || "{}");
+        if (!current.ok || !current.id || current.id === previousSshComposer.id || before.some((entry) => entry.id === current.id)) {
+          const error2 = cursorSessionError("SSH_NEW_AGENT_NOT_CONFIRMED", "New Agent did not produce a distinct composer in the bound window; the existing chat was not sent a prompt");
+          error2.confirmedNotSent = true;
+          throw error2;
+        }
+        job.provisionalAgentId = current.id;
       }
       let provisionalAgent = null;
       for (let i = 0; i < 5 && !provisionalAgent; i++) {
@@ -28333,7 +28701,7 @@ var CursorBridge = class {
             entry = promoted;
           }
         }
-        if (entry && entry.registeredBySectionMap && classifyParallelTerminalIcon(entry.icon) === "unknown") {
+        if (entry && (entry.registeredBySectionMap || entry.statusRequiresSelection) && classifyParallelTerminalIcon(entry.icon) === "unknown") {
           const opened = await evalJS(c, exprOpenAgent(job.agentId));
           if (opened === "OPENED") {
             await sleep2(350);

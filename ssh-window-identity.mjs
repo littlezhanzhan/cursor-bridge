@@ -1,4 +1,4 @@
-import { parseSshWorkspace } from './remote-workspace.mjs';
+import { parseSshWorkspace, sameSshAuthority } from './remote-workspace.mjs';
 
 /**
  * Read only the identity fields from Cursor's renderer preload configuration.
@@ -150,7 +150,7 @@ export function inspectSshWindowIdentity(raw, expectedWorkspace) {
     ? identity.remoteAuthority
     : null;
   if (!remoteAuthority) return failure('remote_authority_missing');
-  if (remoteAuthority !== expected.authority) return failure('remote_authority_mismatch', remoteAuthority);
+  if (!sameSshAuthority(remoteAuthority, expected.authority)) return failure('remote_authority_mismatch', remoteAuthority);
 
   if (identity.workspace && typeof identity.workspace === 'object') {
     return failure('workspace_roots_unresolved', remoteAuthority);
@@ -162,8 +162,9 @@ export function inspectSshWindowIdentity(raw, expectedWorkspace) {
   const parsedFolder = parseFolderUri(identity.folderUri);
   if (parsedFolder.error) return failure(parsedFolder.error, remoteAuthority);
   const folder = parsedFolder.value;
-  if (folder.authority !== expected.authority) return failure('folder_uri_authority_mismatch', remoteAuthority);
+  if (!sameSshAuthority(folder.authority, expected.authority)) return failure('folder_uri_authority_mismatch', remoteAuthority);
   if (folder.remotePath !== expected.remotePath) return failure('folder_uri_path_mismatch', remoteAuthority);
 
-  return { ok: true, workspace: expected, remoteAuthority };
+  return { ok: true, workspace: expected, remoteAuthority,
+    ...(remoteAuthority !== expected.authority ? { authorityMatch: 'host-only-encoding-equivalent' } : {}) };
 }

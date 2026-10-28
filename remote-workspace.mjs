@@ -1,7 +1,41 @@
+import { Buffer } from 'node:buffer';
+
 const REMOTE_SCHEME = 'vscode-remote';
 const SSH_AUTHORITY = /^ssh-remote\+([A-Za-z0-9][A-Za-z0-9._-]*)$/;
 const ENCODED_SEPARATOR_OR_NUL = /%(?:2f|5c|00)/i;
 const AMBIGUOUS_DOUBLE_ESCAPE = /%(?:2e|2f|5c|00)/i;
+
+function hostOnlyAuthorityAlias(authority) {
+  const match = typeof authority === 'string' && authority.match(SSH_AUTHORITY);
+  if (!match) return null;
+  const suffix = match[1];
+  // Cursor tries hex JSON before its legacy alias parser. Only bridge the narrow
+  // hostName-only representation; credentials, ports and options stay opaque.
+  if (suffix.length <= 4096 && suffix.length % 2 === 0 && /^[0-9a-f]+$/i.test(suffix)) {
+    let decoded;
+    try {
+      decoded = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from(suffix, 'hex')));
+    } catch { return suffix; }
+    if (decoded && typeof decoded === 'object' && !Array.isArray(decoded)) {
+      const keys = Object.keys(decoded);
+      if (keys.length !== 1 || keys[0] !== 'hostName' || typeof decoded.hostName !== 'string'
+          || !SSH_AUTHORITY.test(`ssh-remote+${decoded.hostName}`)) return null;
+      return decoded.hostName;
+    }
+    // A non-object JSON value is not a valid new-style Cursor authority.
+    return suffix;
+  }
+  return suffix;
+}
+
+export function sameSshAuthority(left, right) {
+  if (typeof left !== 'string' || typeof right !== 'string') return false;
+  if (!SSH_AUTHORITY.test(left) || !SSH_AUTHORITY.test(right)) return false;
+  if (left === right) return true;
+  const a = hostOnlyAuthorityAlias(left);
+  const b = hostOnlyAuthorityAlias(right);
+  return a !== null && b !== null && a === b;
+}
 
 function invalid(message) {
   throw new TypeError(`Invalid SSH workspace URI: ${message}`);

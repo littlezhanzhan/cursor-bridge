@@ -12,6 +12,7 @@ test('wrong remote identity blocks real continue, collect and stop paths before 
   const root = mkdtempSync(join(tmpdir(), 'cursor-ssh-operation-'));
   const evaluated = [];
   const inputs = [];
+  let currentAuthority = 'ssh-remote+other-host';
   let port;
   const server = createServer((request, response) => {
     response.setHeader('content-type', 'application/json');
@@ -23,10 +24,14 @@ test('wrong remote identity blocks real continue, collect and stop paths before 
     const request = JSON.parse(message.toString());
     if (request.method === 'Runtime.evaluate') {
       evaluated.push(request.params.expression);
-      socket.send(JSON.stringify({ id: request.id, result: { result: { value: JSON.stringify({
-        remoteAuthority: 'ssh-remote+other-host', workspace: null,
-        folderUri: { scheme: 'vscode-remote', authority: 'ssh-remote+other-host', path: '/srv/project' },
-      }) } } }));
+      let value = false;
+      if (request.params.expression === EXPR_SSH_WINDOW_IDENTITY) value = JSON.stringify({
+        remoteAuthority: currentAuthority, workspace: null,
+        folderUri: { scheme: 'vscode-remote', authority: currentAuthority, path: '/srv/project' },
+      });
+      else if (request.params.expression.includes('composer_missing')) value = JSON.stringify({ ok: true,
+        id: 'local:11111111-1111-4111-8111-111111111111' });
+      socket.send(JSON.stringify({ id: request.id, result: { result: { value } } }));
     } else {
       inputs.push(request.method);
       socket.send(JSON.stringify({ id: request.id, result: {} }));
@@ -65,4 +70,17 @@ test('wrong remote identity blocks real continue, collect and stop paths before 
     assert.ok(evaluated.every(expression => expression === EXPR_SSH_WINDOW_IDENTITY), `${operation}: no history, prompt or stop interaction may occur`);
     assert.deepEqual(inputs, [], `${operation}: no keyboard or mouse events may be dispatched`);
   }
+  currentAuthority = 'ssh-remote+intended-host';
+  inputs.length = 0;
+  const bridge = new CursorBridge({ projectPath: uri, workspaceFile: null,
+    sessionFile: null, runtimeFile: null, modelPreferencesFile: null, runtimeMode: 'normal' });
+  bridge._lastLifecycle = { targetId: 'pinned-ssh-page', projectPath: uri };
+  bridge._ensureChatPanel = async () => {};
+  bridge._readAgentEntries = async () => [{ id: 'local:11111111-1111-4111-8111-111111111111', isSelected: true }];
+  bridge._clickNewAgent = async () => true; // A reported click is not proof of a new Agent.
+  let fills = 0;
+  bridge._fillPrompt = async () => { fills++; };
+  await assert.rejects(bridge._submitParallelAgent({ projectPath: uri, readOnly: true, prompt: 'Never send this' }), /SSH_NEW_AGENT_NOT_CONFIRMED/);
+  assert.equal(fills, 0);
+  assert.deepEqual(inputs, []);
 });

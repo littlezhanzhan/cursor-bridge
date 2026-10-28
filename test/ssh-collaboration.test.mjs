@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CursorBridge, buildToolDefinitions } from '../server.mjs';
 import { parseSshWorkspace } from '../remote-workspace.mjs';
-import { inspectSshWindowIdentity } from '../ssh-window-identity.mjs';
+import { EXPR_SSH_WINDOW_IDENTITY, inspectSshWindowIdentity } from '../ssh-window-identity.mjs';
 import { readWorkspaceBinding } from '../workspace-binding.mjs';
 import { readCursorSessionRegistry } from '../cursor-session-registry.mjs';
 
@@ -141,6 +141,21 @@ test('the pinned CDP target is not silently replaced after a window closes', asy
   bridge.pages = [pageFor(uri, 'replacement')];
   await assert.rejects(bridge._ensureSshWorkspace(), /SSH_WORKSPACE_NOT_FOUND/);
   assert.equal(bridge._lastLifecycle.targetId, 'ssh-target');
+});
+
+test('a matching workspace cannot authorize prompt entry or reply extraction from another composer', async t => {
+  const { bridge } = fixture(t);
+  await bridge.initializeSshWorkspace(uri);
+  const expected = 'local:11111111-1111-4111-8111-111111111111';
+  let visible = 'local:22222222-2222-4222-8222-222222222222';
+  const client = { send: async (_method, params) => ({ result: { value: JSON.stringify(
+    params.expression === EXPR_SSH_WINDOW_IDENTITY ? pageFor(uri).identity : { ok: true, id: visible },
+  ) } }) };
+  for (const stage of ['before_fill', 'before_send', 'before_read_reply']) {
+    await assert.rejects(bridge._verifySshWorkspace(client, { projectPath: uri, agentId: expected }, stage), /SSH_COMPOSER_MISMATCH/);
+  }
+  visible = expected;
+  assert.equal((await bridge._verifySshWorkspace(client, { projectPath: uri, agentId: expected }, 'before_fill')).ok, true);
 });
 
 test('two adapters atomically deduplicate the same SSH creation request', async t => {

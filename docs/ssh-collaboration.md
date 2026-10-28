@@ -1,8 +1,22 @@
-# Experimental SSH collaboration — 6.0.9-ssh.2
+# Experimental SSH collaboration — 6.0.9-ssh.3
+
+`6.0.9-ssh.3` also recognizes Cursor's two host-only SSH authority forms:
+`ssh-remote+alias` and hex-encoded JSON containing only `hostName`. The comparison
+is limited to an exact, case-sensitive alias match. User names, explicit ports,
+SSH options and unknown fields are not discarded or treated as equivalent.
+The actual Cursor workspace URI is preserved; this does not move or merge chat
+history. A saved session must still resolve to its exact original Agent.
+
+Classic IDE's unified sidebar is supported through the existing workspace-scoped
+native header services, so the adapter does not require a visible history button.
+Header enumeration omits titles and message text. Existing chats are opened only
+by a unique exact header ID; unknown statuses are not reported as completion.
+Before sending or extracting a reply, SSH tasks also verify the exact visible
+composer. A New Agent click alone cannot authorize sending into an old chat.
 
 ## Named connections across Codex chats
 
-`6.0.9-ssh.2` adds user-level names that are independent of Codex thread IDs and
+`6.0.9-ssh.2` added user-level names that are independent of Codex thread IDs and
 working directories. A name stores the exact SSH URI and the default dedicated
 Bridge session. Existing registered names can be listed or inspected without
 contacting Cursor:
