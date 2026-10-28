@@ -1,10 +1,10 @@
 {
   "name": "cursor-bridge",
-  "version": "6.0.9",
+  "version": "6.0.9-ssh.1",
   "description": "Evidence-backed Cursor Context Engine search and bounded, explicitly continuous Cursor Agent execution, including a UI-suppressed minimal runtime.",
   "author": {
     "name": "Vanyangyang"
   },
   "license": "MIT",
-  "repository": "https://github.com/Vanyangyang/cursor-bridge"
+  "repository": "https://github.com/littlezhanzhan/cursor-bridge"
 }

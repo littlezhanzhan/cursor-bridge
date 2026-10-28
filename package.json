@@ -1,6 +1,6 @@
 {
   "name": "cursor-bridge-workspace",
-  "version": "6.0.9",
+  "version": "6.0.9-ssh.1",
   "private": true,
   "description": "Evidence-backed Cursor Context Engine search and bounded, explicitly continuous Cursor Agent execution over CDP.",
   "type": "module",
@@ -12,6 +12,7 @@
     "prepublishOnly": "node -e \"throw new Error('The repository root is private; publish pi-packages only.')\"",
     "start": "node server.mjs",
     "build": "node build.mjs",
+    "build:cursor": "node build.mjs --cursor-only",
     "build:grok-supervisor": "node build.mjs --grok-only",
     "build:pi-packages": "node scripts/build-pi-packages.mjs --out .pi-package-stage",
     "build:mcp-packages": "node scripts/build-mcp-packages.mjs --out .mcp-package-stage",
@@ -34,11 +35,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Vanyangyang/cursor-bridge.git"
+    "url": "git+https://github.com/littlezhanzhan/cursor-bridge.git"
   },
-  "homepage": "https://github.com/Vanyangyang/cursor-bridge#readme",
+  "homepage": "https://github.com/littlezhanzhan/cursor-bridge#readme",
   "bugs": {
-    "url": "https://github.com/Vanyangyang/cursor-bridge/issues"
+    "url": "https://github.com/littlezhanzhan/cursor-bridge/issues"
   },
   "author": "Vanyangyang",
   "license": "MIT",

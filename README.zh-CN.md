@@ -1,3 +1,6 @@
+> SSH 预览版 fork：新增的两个 SSH 工具、独立插件市场和 `6.0.9-ssh.1`
+> 使用方法见 [SSH 协作说明](./docs/ssh-collaboration.md)。下文保留上游本地工作区说明与历史验收记录。
+
 <p align="center">
   <a href="https://github.com/Vanyangyang/cursor-bridge/commits/main"><img alt="Long-term maintenance commitment" src="https://img.shields.io/badge/LONG--TERM_MAINTENANCE-COMMITTED-8B5CF6?style=for-the-badge&amp;logo=git&amp;logoColor=white" /></a>
   <a href="https://cursor.com/changelog"><img alt="Tracking the latest Cursor releases" src="https://img.shields.io/badge/CURSOR_RELEASES-STAYING_IN_SYNC-00C7B7?style=for-the-badge&amp;logo=cursor&amp;logoColor=white" /></a>

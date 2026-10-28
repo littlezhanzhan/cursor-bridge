@@ -8,6 +8,8 @@ const banner = {
   js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
 };
 const grokOnly = process.argv.includes('--grok-only');
+const cursorOnly = process.argv.includes('--cursor-only');
+if (grokOnly && cursorOnly) throw new Error('Choose --grok-only or --cursor-only');
 
 if (!grokOnly) {
   await build({
@@ -21,7 +23,7 @@ if (!grokOnly) {
   });
 }
 
-await build({
+if (!cursorOnly) await build({
   entryPoints: ['plugins/grok-build-supervisor/scripts/server.mjs'],
   bundle: true,
   platform: 'node',
@@ -31,7 +33,7 @@ await build({
   banner,
 });
 
-await build({
+if (!cursorOnly) await build({
   entryPoints: ['plugins/grok-build-supervisor/scripts/supervisor-daemon.mjs'],
   bundle: true,
   platform: 'node',
@@ -57,5 +59,7 @@ if (!grokOnly) {
   console.log('✅ built dist/cursor-bridge.mjs');
   console.log('✅ built dist/cursor-lifecycle-supervisor.mjs');
 }
-console.log('✅ built plugins/grok-build-supervisor/dist/grok-build-supervisor.mjs');
-console.log('✅ built plugins/grok-build-supervisor/dist/supervisor-daemon.mjs');
+if (!cursorOnly) {
+  console.log('✅ built plugins/grok-build-supervisor/dist/grok-build-supervisor.mjs');
+  console.log('✅ built plugins/grok-build-supervisor/dist/supervisor-daemon.mjs');
+}

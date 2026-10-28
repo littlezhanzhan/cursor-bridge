@@ -64,8 +64,10 @@ import {
 } from './cursor-session-registry.mjs';
 import { isAgentsWindowTitle } from './cursor-ensure-core.mjs';
 import { defaultLifecycleDir, ensureLifecycleDir } from './lifecycle-paths.mjs';
+import { isSshWorkspaceUri, parseSshWorkspace } from './remote-workspace.mjs';
+import { EXPR_SSH_WINDOW_IDENTITY, inspectSshWindowIdentity } from './ssh-window-identity.mjs';
 
-const PLUGIN_VERSION = '6.0.9';
+const PLUGIN_VERSION = '6.0.9-ssh.1';
 const CDP_PORT = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 const ORIGIN = `http://localhost:${CDP_PORT}`;
 const QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 300000);
@@ -95,6 +97,10 @@ function sessionPathContains(parent, child) {
 }
 
 function sameSessionProject(left, right) {
+  if (isSshWorkspaceUri(left) || isSshWorkspaceUri(right)) {
+    return isSshWorkspaceUri(left) && isSshWorkspaceUri(right)
+      && parseSshWorkspace(left).uri === parseSshWorkspace(right).uri;
+  }
   const a = resolve(String(left || ''));
   const b = resolve(String(right || ''));
   return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
@@ -1308,7 +1314,8 @@ const REACT_ADAPTER_BODY = `
     };
   };
   const findLegacyAdapter=()=>{
-    const label=[...document.querySelectorAll('.compact-agent-history-react-menu-label')].find(e=>e.offsetParent!==null);
+    const label=[...document.querySelectorAll('.compact-agent-history-react-menu-label')].find(e=>e.offsetParent!==null)
+      ||[...document.querySelectorAll('.compact-agent-history-react-menu-content')].find(e=>e.offsetParent!==null);
     if(!label)return null;
     const nodes=[]; let n=label;
     for(let i=0;n&&i<18;i++,n=n.parentElement)nodes.push(n);
@@ -1796,7 +1803,7 @@ class CursorBridge {
       ? readWorkspaceBinding(this.workspaceFile, this.workspaceKey)
       : null;
     this.projectPath = options.projectPath !== undefined
-      ? resolve(String(options.projectPath))
+      ? (isSshWorkspaceUri(options.projectPath) ? parseSshWorkspace(options.projectPath).uri : resolve(String(options.projectPath)))
       : persistedWorkspace && persistedWorkspace.projectPath || null;
     this.workspaceSource = options.projectPath !== undefined
       ? 'constructor'
@@ -1805,6 +1812,7 @@ class CursorBridge {
         : 'auto_detect';
     this.workspaceUpdatedAt = persistedWorkspace && persistedWorkspace.updatedAt || null;
     this.workspaceConfirmationRequired = this.workspaceKey === 'default' && options.projectPath === undefined;
+    if (isSshWorkspaceUri(this.projectPath)) this.workspaceConfirmationRequired = true;
     this.modelPreferencesFile = options.modelPreferencesFile === null
       ? null
       : resolve(options.modelPreferencesFile || resolveCursorModelPreferencesFile());
@@ -1848,6 +1856,10 @@ class CursorBridge {
       interactionPreference: 'agents_v2_when_open_else_legacy',
       cursorUiPreferencePreserved: true,
       workspaceBinding: this._lastWorkspaceBinding || null,
+      ...(isSshWorkspaceUri(resolvedProjectPath) ? {
+        workspaceKind: 'ssh', remoteWorkspace: parseSshWorkspace(resolvedProjectPath),
+        sshScope: 'single-folder-existing-ide-read-only',
+      } : {}),
     };
   }
 
@@ -1904,6 +1916,7 @@ class CursorBridge {
       state: 'creating',
       projectPath,
       workspaceKey: this.workspaceKey,
+      ...(isSshWorkspaceUri(projectPath) ? { remoteWorkspace: parseSshWorkspace(projectPath), collaborationKind: 'ssh-read-only' } : {}),
       agentId: null,
       agentLabel: null,
       modelPreference: modelPreference ? { ...modelPreference } : null,
@@ -1925,11 +1938,25 @@ class CursorBridge {
       recoveryState: null,
       attention: null,
     };
-    updateCursorSessionRegistry(this.sessionFile, (registry) => {
+    return updateCursorSessionRegistry(this.sessionFile, (registry) => {
+      if (isSshWorkspaceUri(projectPath)) {
+        const duplicate = Object.values(registry.sessions).find(item =>
+          item.collaborationKind === 'ssh-read-only' && item.workspaceKey === this.workspaceKey
+          && sameSessionProject(item.projectPath, projectPath) && item.lastRequestId === requestId);
+        if (duplicate) return { ...duplicate, duplicateRequest: true };
+        this._assertSshRegistryIdle(registry, projectPath);
+      }
       if (registry.sessions[sessionId]) throw cursorSessionError('SESSION_ID_COLLISION', sessionId);
       registry.sessions[sessionId] = session;
+      return session;
     }, { now });
-    return session;
+  }
+
+  _assertSshRegistryIdle(registry, projectPath, ownSessionId = '') {
+    const blocking = Object.values(registry.sessions).find(item => item.id !== ownSessionId
+      && item.collaborationKind === 'ssh-read-only' && sameSessionProject(item.projectPath, projectPath)
+      && (item.activeTaskId || ['creating', 'busy', 'needs_attention'].includes(item.state)));
+    if (blocking) throw cursorSessionError('SSH_WORKSPACE_BUSY', `SSH workspace is reserved by ${blocking.id}; collect or reconcile that exact session before submitting another`);
   }
 
   _claimExistingSession({ sessionId, taskId, projectPath, readOnly, allowedPaths, requestId, timeoutMs }) {
@@ -1939,13 +1966,14 @@ class CursorBridge {
     const result = updateCursorSessionRegistry(this.sessionFile, (registry) => {
       const session = registry.sessions[sessionId];
       if (!session) throw cursorSessionError('SESSION_NOT_FOUND', sessionId);
+      if (!sameSessionProject(session.projectPath, projectPath)) {
+        throw cursorSessionError('SESSION_WORKSPACE_MISMATCH', `session is bound to ${session.projectPath}`);
+      }
       if (requestId && session.lastRequestId === requestId) {
         return { duplicate: true, session: { ...session } };
       }
       this._ensureTaskCapacity();
-      if (!sameSessionProject(session.projectPath, projectPath)) {
-        throw cursorSessionError('SESSION_WORKSPACE_MISMATCH', `session is bound to ${session.projectPath}`);
-      }
+      if (isSshWorkspaceUri(projectPath)) this._assertSshRegistryIdle(registry, projectPath, sessionId);
       if (session.state === 'closed') throw cursorSessionError('SESSION_CLOSED', sessionId);
       const leaseExpiresAt = Date.parse(session.lease && session.lease.expiresAt || '');
       if (session.activeTaskId || session.state === 'busy' || session.state === 'creating') {
@@ -2305,8 +2333,96 @@ class CursorBridge {
   }
 
   async initializeWorkspace(projectPath) {
+    if (isSshWorkspaceUri(projectPath)) return this.initializeSshWorkspace(projectPath);
     const result = await this._withWorkspaceAdmission(() => this._initializeWorkspace(projectPath));
     return { ...result, workspaceBusy: this._workspacePending > 0 };
+  }
+
+  async _listSshPages() {
+    return (await httpJson('/json/list')).filter(page => page.type === 'page' && page.webSocketDebuggerUrl);
+  }
+
+  async _inspectSshPage(page, workspace) {
+    const c = makeClient(page.webSocketDebuggerUrl);
+    try {
+      await c.ready;
+      const identity = inspectSshWindowIdentity(await evalJS(c, EXPR_SSH_WINDOW_IDENTITY, { timeoutMs: 5000 }), workspace);
+      if (!identity.ok) return identity;
+      const capabilities = JSON.parse(await evalJS(c, EXPR_PAGE_CAPABILITIES, { timeoutMs: 5000 }) || '{}');
+      if (capabilities.uiFlavor !== 'legacy') return { ok: false, reason: 'SSH_CLASSIC_IDE_REQUIRED' };
+      return { ...identity, capabilities };
+    } finally { c.close(); }
+  }
+
+  async _findSshWorkspace(workspace, targetId = '') {
+    const pages = await this._listSshPages();
+    const matches = [];
+    for (const page of targetId ? pages.filter(page => page.id === targetId) : pages) {
+      try {
+        const identity = await this._inspectSshPage(page, workspace);
+        if (identity.ok) matches.push({ page, identity });
+      } catch { /* Unreadable targets are never a reason to guess by title. */ }
+    }
+    if (matches.length !== 1) throw cursorSessionError(
+      matches.length > 1 ? 'SSH_WORKSPACE_AMBIGUOUS' : 'SSH_WORKSPACE_NOT_FOUND',
+      `Expected one already-open classic Cursor IDE window for ${workspace.uri}; found ${matches.length}. Open that SSH folder with CDP enabled, or specify its exact target_id.`,
+    );
+    return matches[0];
+  }
+
+  async initializeSshWorkspace(workspace, { targetId = '' } = {}) {
+    const expected = parseSshWorkspace(workspace);
+    return this._withWorkspaceAdmission(async () => {
+      if (this.busy || this.queue.length || this.activeParallel.size) {
+        throw cursorSessionError('SSH_WORKSPACE_BUSY', 'Finish or recover the current task before changing the SSH workspace');
+      }
+      const match = await this._findSshWorkspace(expected, String(targetId || ''));
+      const saved = writeWorkspaceBinding(this.workspaceFile, this.workspaceKey, expected.uri);
+      this.projectPath = saved.projectPath;
+      this.workspaceSource = 'persistent_init';
+      this.workspaceUpdatedAt = saved.updatedAt;
+      this.workspaceConfirmationRequired = false;
+      this._setSshLifecycle(expected, match);
+      return { ...this.workspaceView(), ready: true, status: 'ssh-window-bound',
+        targetId: match.page.id, readOnly: true, remoteConnectionState: 'not-independently-probed',
+        nextStep: 'Use cursor_ssh_session with a new request_id to create a dedicated read-only collaboration chat; reuse its session_id for subsequent turns.' };
+    });
+  }
+
+  _setSshLifecycle(workspace, { page }) {
+    this._lastWorkspaceBinding = { ok: true, state: 'ssh-window-identity-verified',
+      workspace: workspace.uri, remoteAuthority: workspace.authority, targetId: page.id,
+      checkedAt: new Date().toISOString() };
+    this._lastLifecycle = { ok: true, status: 'already', projectPath: workspace.uri,
+      targetId: page.id, workspaceAction: 'attached-ssh-workspace', lifecycleMode: 'ssh-attached',
+      remoteWorkspace: workspace, adapterPid: process.pid, readOnly: true,
+      remoteConnectionState: 'not-independently-probed', identitySource: 'cursor-window-configuration' };
+  }
+
+  async _ensureSshWorkspace() {
+    const workspace = parseSshWorkspace(this.projectPath);
+    const match = await this._findSshWorkspace(workspace, this._lastLifecycle?.targetId || '');
+    this._setSshLifecycle(workspace, match);
+  }
+
+  async _verifySshWorkspace(c, job = {}, stage = 'before-operation') {
+    const workspace = parseSshWorkspace(job.projectPath || this.projectPath);
+    if (!sameSessionProject(workspace.uri, this.projectPath)) {
+      throw cursorSessionError('SSH_WORKSPACE_MISMATCH', 'The task belongs to a different SSH workspace');
+    }
+    const identity = inspectSshWindowIdentity(await evalJS(c, EXPR_SSH_WINDOW_IDENTITY, { timeoutMs: 5000 }), workspace);
+    job.workspaceBindingChecks ||= {};
+    job.workspaceBindingChecks[stage] = { ...identity, checkedAt: new Date().toISOString() };
+    if (!identity.ok) throw cursorSessionError('SSH_WORKSPACE_MISMATCH', identity.reason || 'The SSH window identity changed');
+    return identity;
+  }
+
+  async sshSessionTurn(prompt, options = {}) {
+    if (!isSshWorkspaceUri(this.projectPath)) throw cursorSessionError('SSH_INITIALIZATION_REQUIRED', 'Run cursor_ssh_init first');
+    if (!options.requestId) throw cursorSessionError('SSH_REQUEST_ID_REQUIRED', 'Supply one unique request_id and reuse it only when retrying that same turn');
+    return this.doTask(prompt, { ...options, workspacePath: options.workspacePath || this.projectPath,
+      readOnly: true, readOnlySpecified: true, allowedPaths: [], execution: 'parallel_agent',
+      sessionMode: options.sessionId ? 'continue' : 'create', preferLegacyUi: true });
   }
 
   async _initializeWorkspace(projectPath) {
@@ -2551,6 +2667,7 @@ class CursorBridge {
   }
 
   async contextEngine(query, options = {}) {
+    if (isSshWorkspaceUri(this.projectPath)) throw cursorSessionError('SSH_SESSION_REQUIRED', 'Use cursor_ssh_session for SSH queries so the original IDE chat is preserved');
     const text = String(query || '').trim();
     if (!text) throw new Error('query must not be empty');
     if (text.length > 20000) throw new Error('query exceeds the 20,000-character limit');
@@ -2627,6 +2744,29 @@ class CursorBridge {
       throw cursorSessionError('SESSION_EXECUTION_INVALID', 'persistent sessions require execution=parallel_agent and never fall back to FIFO');
     }
     const readOnly = options.readOnly === true;
+    if (isSshWorkspaceUri(this.projectPath)) {
+      if (!readOnly || (options.allowedPaths && options.allowedPaths.length)) {
+        throw cursorSessionError('SSH_READ_ONLY_REQUIRED', 'The first SSH collaboration release only accepts read_only=true without write paths');
+      }
+      if (sessionMode === 'isolated' || execution !== 'parallel_agent') {
+        throw cursorSessionError('SSH_SESSION_REQUIRED', 'SSH tasks require a dedicated create/continue session');
+      }
+      if (!requestId) throw cursorSessionError('SSH_REQUEST_ID_REQUIRED', 'SSH tasks require a stable request_id');
+      if (sessionMode === 'create' && this.sessionFile) {
+        const session = Object.values(readCursorSessionRegistry(this.sessionFile).sessions).find(item =>
+          item.collaborationKind === 'ssh-read-only' && item.workspaceKey === this.workspaceKey
+          && sameSessionProject(item.projectPath, this.projectPath) && item.lastRequestId === requestId);
+        if (session) {
+          const existing = this.tasks.get(session.activeTaskId || session.lastTask?.taskId || '');
+          return { duplicate: true, response: { duplicate: true, ...(existing ? this._compactTaskView(existing) : this._sessionView(session)) } };
+        }
+      }
+      const repeatedContinuation = sessionMode === 'continue' && this.sessionFile
+        && this._readSession(sessionId)?.lastRequestId === requestId;
+      if (!repeatedContinuation && (this.busy || this.queue.length || this.activeParallel.size)) {
+        throw cursorSessionError('SSH_SESSION_BUSY', 'SSH collaboration is serial; collect or recover the active turn before submitting another');
+      }
+    }
     const requestedTimeoutMs = Number(options.timeoutMs ?? 600000);
     if (!Number.isFinite(requestedTimeoutMs)) throw new Error('timeout_ms must be finite');
     const timeoutMs = Math.max(30000, Math.min(900000, requestedTimeoutMs));
@@ -2676,6 +2816,10 @@ class CursorBridge {
         requestId,
         timeoutMs,
       });
+      if (session.duplicateRequest) {
+        const existing = this.tasks.get(session.activeTaskId || session.lastTask?.taskId || '');
+        return { duplicate: true, response: { duplicate: true, ...(existing ? this._compactTaskView(existing) : this._sessionView(session)) } };
+      }
     } else if (sessionMode === 'continue') {
       const claimed = this._claimExistingSession({
         sessionId,
@@ -2960,6 +3104,7 @@ class CursorBridge {
   // 统一走 ensureCursorRunning 复用其【单一身份校验来源】（cdpUp + cdpIsCursor）——避免热路径裸 /json/version 检查
   // 绕过身份校验、在别的 IDE 占 9223 时驱动错应用（2026-06-08 review #6）。
   _ensureCursor({ registerWorkspace = false } = {}) {
+    if (isSshWorkspaceUri(this.projectPath)) return this._ensureSshWorkspace();
     this._refreshPersistedRuntimeMode();
     if (this._healing) return this._healing;
     this._healing = (async () => {
@@ -3865,6 +4010,8 @@ class CursorBridge {
 
   async _closeHistory(c) {
     try {
+      // Cleanup must not dismiss a menu in a window that changed workspace.
+      if (isSshWorkspaceUri(this.projectPath)) await this._verifySshWorkspace(c, {}, 'before_history_close');
       if (await evalJS(c, EXPR_HISTORY_OPEN)) {
         await chord(c, 0, 'Escape', 'Escape', 27);
         await sleep(180);
@@ -4006,6 +4153,7 @@ class CursorBridge {
   }
 
   async _verifyAgentsWorkspace(c, job, stage = 'before_fill') {
+    if (isSshWorkspaceUri(job?.projectPath || this.projectPath)) return this._verifySshWorkspace(c, job, stage);
     if (!job || job.targetUiFlavor !== 'agents_v2') return;
     const projectPath = job.projectPath || this.projectPath;
     const diagnostic = JSON.parse(await evalJS(c, exprInspectAgentWorkspace(projectPath, {
@@ -4085,7 +4233,7 @@ class CursorBridge {
     const page = await findPage({
       targetId: this._lastLifecycle && this._lastLifecycle.targetId,
       purpose: 'parallel_agent',
-      preferAgentsV2: true,
+      preferAgentsV2: !isSshWorkspaceUri(job.projectPath || this.projectPath),
     });
     job.targetId = page.id;
     job.targetUiFlavor = page.capabilities && page.capabilities.uiFlavor || null;
@@ -4093,6 +4241,7 @@ class CursorBridge {
     await c.ready;
     let sent = false;
     try {
+      if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_create');
       this._throwIfCancelledBeforeSend(job);
       await this._ensureChatPanel(c);
       let before;
@@ -4231,7 +4380,7 @@ class CursorBridge {
     const page = await findPage({
       targetId: this._lastLifecycle && this._lastLifecycle.targetId,
       purpose: 'parallel_agent',
-      preferAgentsV2: true,
+      preferAgentsV2: !isSshWorkspaceUri(job.projectPath || this.projectPath),
     });
     job.targetId = page.id;
     job.targetUiFlavor = page.capabilities && page.capabilities.uiFlavor || null;
@@ -4239,6 +4388,7 @@ class CursorBridge {
     await c.ready;
     let sent = false;
     try {
+      if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_continue');
       this._throwIfCancelledBeforeSend(job);
       await this._ensureChatPanel(c);
       const entries = await this._readAgentEntries(c, true);
@@ -4295,6 +4445,7 @@ class CursorBridge {
       const c = makeClient(page.webSocketDebuggerUrl);
       await c.ready;
       try {
+        if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_poll');
         let entries = await this._readAgentEntries(c);
         let entry = entries.find((e) => e.id === job.agentId) || null;
         if (!entry && (job.execution === 'fifo' || job.effectiveExecution === 'fifo')) {
@@ -4489,6 +4640,7 @@ class CursorBridge {
   }
 
   async _withRestoredAgentSelection(c, job, operation) {
+    if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_collect');
     const entries = await this._readAgentEntries(c, true);
     const previousSelectedId = (entries.find((entry) => entry.isSelected) || {}).id || null;
     try {
@@ -4496,6 +4648,7 @@ class CursorBridge {
     } finally {
       if (previousSelectedId && previousSelectedId !== job.agentId) {
         try {
+          if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_restore');
           const opened = await this._requestExactAgentSelection(c, previousSelectedId);
           if (opened !== 'OPENED') throw new Error(`Unable to restore ${previousSelectedId}: ${opened}`);
           await this._waitForSelectedAgent(c, previousSelectedId);
@@ -4523,6 +4676,7 @@ class CursorBridge {
       // Agent History 已给出完成图标，但打开会话后的 Markdown/虚拟列表仍可能延迟挂载。
       // 给视图约 24 秒稳定时间，并允许只有一个可见 Markdown（常见于用户 prompt 不是 markdown 的情况）。
       for (let i = 0; i < 80; i++) {
+        if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_read_reply');
         const snap = await this._readResponseSnapshot(c);
         const candidate = String(await evalJS(c, EXPR_EXTRACT) || '').trim();
         const hasNewTurn = isSessionTurnReplyReady(job.responseBaseline, snap);
@@ -4814,6 +4968,7 @@ class CursorBridge {
   }
 
   async _stopBoundAgentOnClient(c, job, options = {}) {
+    if (isSshWorkspaceUri(job?.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_stop');
     if (!job || !job.agentId) return { confirmed: false, state: 'unbound_agent' };
     const preferComposer = options.preferComposer === true
       || job.execution === 'fifo'
@@ -5050,6 +5205,7 @@ class CursorBridge {
       const c = makeClient(page.webSocketDebuggerUrl);
       await c.ready;
       try {
+        if (isSshWorkspaceUri(this.projectPath)) await this._verifySshWorkspace(c, {}, 'before_origin_restore');
         if (await this._ensureHistoryOpen(c)) {
           await evalJS(c, exprOpenAgent(agentId));
           await sleep(450);
@@ -5391,6 +5547,14 @@ class CursorBridge {
   }
 
   _assertWorkspaceConfirmed(workspacePath) {
+    if (isSshWorkspaceUri(this.projectPath)) {
+      if (this.workspaceConfirmationRequired) throw cursorSessionError('SSH_INITIALIZATION_REQUIRED', 'Run cursor_ssh_init for this host session');
+      if (workspacePath !== undefined && (!isSshWorkspaceUri(workspacePath)
+          || !sameSessionProject(this.projectPath, workspacePath))) {
+        throw cursorSessionError('SSH_WORKSPACE_MISMATCH', 'workspace_path must match the exact SSH authority and case-sensitive remote path');
+      }
+      return;
+    }
     let expected = null;
     if (workspacePath !== undefined) {
       if (typeof workspacePath !== 'string' || !isAbsoluteWorkspacePath(workspacePath)) {
@@ -5563,6 +5727,35 @@ const WORKSPACE_PATH_SCHEMA = {
 
 function buildToolDefinitions(bridgeInstance) {
   return [
+    {
+      name: 'cursor_ssh_init',
+      description: 'Bind one already-open classic Cursor IDE SSH folder by exact remote identity. Does not open, close, or switch windows. The first release is single-folder, serial and read-only; use cursor_ssh_session to create a dedicated collaboration chat.',
+      inputSchema: {
+        type: 'object', additionalProperties: false,
+        properties: {
+          uri: { type: 'string', description: 'vscode-remote://ssh-remote+alias/absolute/posix/path' },
+          authority: { type: 'string', description: 'Exact Cursor SSH authority, e.g. ssh-remote+dev' },
+          remote_path: { type: 'string', description: 'Absolute Linux path, e.g. /root/project; tilde must be resolved first' },
+          target_id: { type: 'string', description: 'Optional exact CDP target when multiple windows show the same remote folder' },
+        },
+        oneOf: [{ required: ['uri'], not: { anyOf: [{ required: ['authority'] }, { required: ['remote_path'] }] } },
+          { required: ['authority', 'remote_path'], not: { required: ['uri'] } }],
+      },
+    },
+    {
+      name: 'cursor_ssh_session',
+      description: 'Send a read-only turn to a dedicated SSH collaboration Agent. Omit session_id once to create a separate chat; then reuse the returned Bridge session_id. Supply a unique request_id per turn, reusing it only for retries. Existing user chats are preserved. Collect replies with cursor_status(task_id, detail="result").',
+      inputSchema: {
+        type: 'object', additionalProperties: false,
+        properties: {
+          prompt: { type: 'string' }, request_id: { type: 'string', minLength: 1, maxLength: 200 },
+          session_id: { type: 'string' }, workspace_uri: { type: 'string' },
+          background: { type: 'boolean', default: true },
+          timeout_ms: { type: 'integer', minimum: 30000, maximum: 900000, default: 600000 },
+          request_context: REQUEST_CONTEXT_SCHEMA,
+        }, required: ['prompt', 'request_id'],
+      },
+    },
     {
       name: 'cursor_init',
       description:
@@ -5755,6 +5948,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   try {
+    if (name === 'cursor_ssh_init') {
+      if (args?.uri !== undefined && (args.authority !== undefined || args.remote_path !== undefined)) throw new Error('Use uri or authority + remote_path, not both');
+      const result = await bridge.initializeSshWorkspace(args?.uri ?? { authority: args?.authority, remotePath: args?.remote_path }, { targetId: args?.target_id });
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
+    if (name === 'cursor_ssh_session') {
+      const result = await bridge.sshSessionTurn(args?.prompt, { sessionId: args?.session_id,
+        requestId: args?.request_id, workspacePath: args?.workspace_uri,
+        background: args?.background !== false, timeoutMs: args?.timeout_ms, requestContext: args?.request_context });
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
     if (name === 'cursor_init') {
       const result = await bridge.initializeWorkspace(String(args && args.path || ''));
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
@@ -5882,7 +6086,7 @@ async function main() {
   // Prewarm both runtime modes before the MCP handshake completes. In minimal mode this claims
   // Cursor's default single-instance slot with CDP enabled, then the PID-scoped guard keeps its
   // windows hidden. That prevents later "Open in Cursor" actions from stealing the slot without 9223.
-  const startupEnsure = shouldAutoLaunchCursor()
+  const startupEnsure = shouldAutoLaunchCursor() && !isSshWorkspaceUri(bridge.projectPath)
     ? ensureBridgeCursor(bridge, 'adapter-startup')
       .then((r) => {
         console.error(

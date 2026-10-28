@@ -1,3 +1,7 @@
+> SSH preview fork: see [SSH collaboration](./docs/ssh-collaboration.md) for
+> `6.0.9-ssh.1`, its separate marketplace and the two new SSH tools. The remaining
+> guide retains upstream local-workspace documentation and historical evidence.
+
 <p align="center">
   <a href="https://github.com/Vanyangyang/cursor-bridge/commits/main"><img alt="Long-term maintenance commitment" src="https://img.shields.io/badge/LONG--TERM_MAINTENANCE-COMMITTED-8B5CF6?style=for-the-badge&amp;logo=git&amp;logoColor=white" /></a>
   <a href="https://cursor.com/changelog"><img alt="Tracking the latest Cursor releases" src="https://img.shields.io/badge/CURSOR_RELEASES-STAYING_IN_SYNC-00C7B7?style=for-the-badge&amp;logo=cursor&amp;logoColor=white" /></a>

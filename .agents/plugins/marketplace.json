@@ -1,7 +1,7 @@
 {
-  "name": "vanyangyang",
+  "name": "littlezhanzhan",
   "interface": {
-    "displayName": "Vanyangyang"
+    "displayName": "littlezhanzhan · Cursor Bridge SSH fork"
   },
   "plugins": [
     {

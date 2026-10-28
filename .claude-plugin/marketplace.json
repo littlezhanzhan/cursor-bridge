@@ -1,15 +1,15 @@
 {
-  "name": "vanyangyang",
+  "name": "littlezhanzhan",
   "description": "Vanyangyang's developer tools, including Cursor Bridge and Grok Build Supervisor.",
   "owner": {
-    "name": "Vanyangyang"
+    "name": "littlezhanzhan"
   },
   "plugins": [
     {
       "name": "cursor-bridge",
       "source": ".",
       "description": "Use an adaptive Cursor Context Engine and bounded Cursor Agent execution with exact workspace identity in the Cursor 3.23.12 IDE or Agents Window; see compatibility documentation for verified paths.",
-      "version": "6.0.9",
+      "version": "6.0.9-ssh.1",
       "author": {
         "name": "Vanyangyang"
       }

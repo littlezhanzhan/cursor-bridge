@@ -1,0 +1,127 @@
+# Experimental SSH collaboration — 6.0.9-ssh.1
+
+This fork adds dedicated, persistent collaboration chats for one already-open
+SSH folder in the classic Cursor IDE on Windows. Cursor keeps the SSH connection;
+the MCP adapter continues to run locally. The Agent UI is controlled through
+local CDP, including DOM/React reads and targeted keyboard/mouse events.
+
+## Scope
+
+- One single-folder `vscode-remote://ssh-remote+alias/absolute/path` workspace.
+- Exact SSH authority and case-sensitive POSIX path matching.
+- A new dedicated chat on the first turn; subsequent turns reuse its exact Agent.
+- Read-only request scope, serial workspace admission and stable request IDs.
+- No automatic window opening, closing, project switching, or prompt resubmission.
+- Agents Window, multi-root folders and remote write tasks are outside this MVP.
+
+The API rejects write parameters and adds explicit read-only instructions. Cursor
+retains its own tool permissions: this is **not an OS filesystem sandbox**.
+Window identity verification also does not independently prove SSH liveness;
+initialization reports `remoteConnectionState: not-independently-probed`.
+
+## Install this fork
+
+```powershell
+codex plugin marketplace add littlezhanzhan/cursor-bridge --ref codex/ssh-collaboration-mvp
+codex plugin add cursor-bridge@littlezhanzhan
+```
+
+The fork uses the separate `littlezhanzhan` marketplace and disables automatic
+Cursor startup in its Codex manifest. Enable only the intended Cursor Bridge
+installation in the plugin manager so tools from two installations are not mixed.
+Restart/reload the AI client and start a fresh chat to load the new tool schemas.
+No additional Grok plugin is required.
+
+## Open the target IDE window
+
+Save work and close Cursor normally once if it was launched without CDP. Start
+the Windows desktop with its local debugging port, then open/connect the desired
+SSH folder through Cursor's normal Remote SSH UI. For example:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\cursor\Cursor.exe" --remote-debugging-port=9223 --remote-allow-origins=http://localhost:9223 --classic
+```
+
+Keep CDP local. Existing SSH configuration, authentication and host-key checks
+remain owned by Cursor. Initialization only binds an already-open matching IDE;
+it never closes a running editor or changes it to a different project.
+
+## Initialize and create a chat
+
+Call `cursor_ssh_init`:
+
+```json
+{"authority":"ssh-remote+dev","remote_path":"/srv/project"}
+```
+
+Or use `{"uri":"vscode-remote://ssh-remote+dev/srv/project"}`. Paths must already
+be absolute; resolve `~` using the remote host. If two IDE windows show the same
+folder, pass the intended exact CDP `target_id`; ambiguous matches are rejected.
+
+Call `cursor_ssh_session` for the first turn:
+
+```json
+{
+  "prompt":"Read the project entry points without changing any files.",
+  "request_id":"unique-first-turn-id",
+  "workspace_uri":"vscode-remote://ssh-remote+dev/srv/project",
+  "request_context":{"sender":"model","source":"user"}
+}
+```
+
+It returns a task ID and a Bridge `sessionId`. Use `cursor_status` with `task_id`
+to follow progress; retrieve the reply with `detail: "result"`. Collection is
+explicit so an unread reply cannot silently disappear.
+
+For the next turn, supply the returned `session_id` and a **new** `request_id`.
+Reuse a request ID only to retry that same latest turn. The same exact canonical
+workspace URI and Agent ID are checked. A request never adopts an arbitrary
+existing user chat. The classic history menu may initially be empty.
+
+Shared registry transactions prevent two adapters using that same registry from
+admitting simultaneous tasks to one remote URI. Unknown/interrupted sessions keep
+the workspace reserved until reconciled; elapsed time alone does not prove stop.
+Different registry files are independent and must not be used to bypass admission.
+
+## Recovery and limitations
+
+- Each new adapter must explicitly initialize and revalidate its saved SSH binding.
+- Polling, reply collection and targeted stop recheck the renderer workspace identity.
+- A lost/replaced CDP target is not silently substituted. This MVP requires a fresh
+  adapter, explicit initialization, then `cursor_session_control` reconciliation
+  of the exact saved session. It does not automatically resend the old prompt.
+- An uncertain stop remains unconfirmed. Agent cancellation is not a guarantee
+  that all previously launched remote shell child processes have exited.
+- UI/React selectors are internal Cursor interfaces and require version regression.
+- The upstream local-workspace behavior remains available through its original tools.
+
+## Build and verification
+
+```powershell
+npm install --ignore-scripts
+npm run build:cursor
+npm test
+npm run smoke:mcp
+```
+
+`build:cursor` builds only the Cursor adapter and lifecycle bundle, without requiring
+dependencies of the independent Grok plugin. MCP smoke uses isolated state and never
+submits a model request.
+
+An explicit live check makes two requests using the signed-in Cursor account:
+
+```powershell
+node test/live-ssh-session.mjs --confirm-live --uri vscode-remote://ssh-remote+dev/srv/project --file example.py
+```
+
+Review and authorize that payload before running it. The first turn checks only the
+named Python file and remembers a random token; the second recalls the token without
+being given it again. The script requires the same exact Agent and Bridge session.
+If the named file is absent it reports absence, without scanning alternative files.
+This proves chat continuity; it does not independently verify all model claims or
+guarantee no writes. State and replies are saved under ignored `.artifacts/` by default.
+
+Live validation on Cursor 3.21.18 completed two turns on one SSH workspace, preserving
+the same Agent/session and recalling the token. The test file was absent, so this
+run verified directory routing and file-existence handling rather than file-content
+extraction. No broad remote-write, disconnect or cross-version certification is claimed.
