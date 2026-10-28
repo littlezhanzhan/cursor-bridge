@@ -1,4 +1,61 @@
-# Experimental SSH collaboration — 6.0.9-ssh.1
+# Experimental SSH collaboration — 6.0.9-ssh.2
+
+## Named connections across Codex chats
+
+`6.0.9-ssh.2` adds user-level names that are independent of Codex thread IDs and
+working directories. A name stores the exact SSH URI and the default dedicated
+Bridge session. Existing registered names can be listed or inspected without
+contacting Cursor:
+
+```json
+{"action":"list"}
+```
+
+Call `cursor_connection` once to save a target:
+
+```json
+{"action":"save","name":"project","uri":"vscode-remote://ssh-remote+dev/srv/project"}
+```
+
+An optional `session_id` attaches an existing read-only session already present
+in the shared session registry. It must match the exact URI and scope. A saved
+name cannot silently move to another target: retargeting needs `replace:true`.
+When moving a name without explicitly supplying another session, the old default
+session is cleared. Other saved names remain intact.
+
+In a new Codex chat, the caller only needs `cursor_connection_send`:
+
+```json
+{
+  "name":"project",
+  "prompt":"Continue the previous read-only investigation.",
+  "request_id":"unique-new-turn-id",
+  "request_context":{"sender":"model","source":"user"}
+}
+```
+
+The controller reads the saved URI, verifies the actual SSH IDE window, and
+continues the stored Agent. It does not ask for the host/path/session again.
+The first send creates a dedicated session if the name has no session yet, then
+persists its ID. `new_session:true` explicitly requests another dedicated Agent.
+Missing, interrupted, closed or mismatched saved sessions never silently fall
+back to creating a replacement. Inspect/reconcile the exact session first.
+
+The reply receipt includes `connectionName`, `sessionReused`, `sessionId` and
+`taskId`. Poll and collect with `cursor_status` as usual. Request IDs deduplicate
+only the latest turn, including retries while the first turn is pending.
+
+Defaults are `%APPDATA%/cursor-bridge/connections-v1.json` for names and
+`%APPDATA%/cursor-bridge/sessions-v1.json` for sessions. The default names file is
+shared across new chats; `CURSOR_BRIDGE_CONNECTIONS_FILE` can deliberately isolate
+it. Adapters must also share their session registry to continue the same Agent.
+Thread-specific workspace bindings remain separate and are revalidated by name.
+No credentials or chat bodies are stored in the named-connection records.
+
+The names file uses atomic writes, a cross-process lock and revision checks.
+If another process changes a mapping after a task was submitted, the controller
+returns the original task receipt with `connectionUpdated:false`; it neither
+overwrites the changed mapping nor resends the prompt.
 
 This fork adds dedicated, persistent collaboration chats for one already-open
 SSH folder in the classic Cursor IDE on Windows. Cursor keeps the SSH connection;

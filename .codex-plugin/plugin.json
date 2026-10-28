@@ -1,6 +1,6 @@
 {
   "name": "cursor-bridge",
-  "version": "6.0.9-ssh.1",
+  "version": "6.0.9-ssh.2",
   "description": "Evidence-backed Cursor Context Engine search and bounded Cursor Agent execution, including a UI-suppressed minimal runtime.",
   "author": {
     "name": "Vanyangyang"
@@ -22,7 +22,7 @@
   },
   "interface": {
     "displayName": "Cursor Bridge",
-    "shortDescription": "Cursor project context and experimental read-only SSH collaboration sessions.",
+    "shortDescription": "Saved SSH connections and persistent Cursor collaboration across Codex chats.",
     "longDescription": "Use Cursor's indexed Agent as an adaptive Cursor Context Engine. State the intent once; Cursor chooses the necessary investigation depth and returns compact path:line evidence instead of guessed locations. When execution is useful, cursor_do supports isolated FIFO or independent Agent tasks plus explicit persistent sessions for continued delivery to the same verified Agent. The supervising host retains scope, review, and final control. User-facing prose follows the task language while machine fields remain stable. Minimal runtime keeps CCE and execution tools available while hiding the Windows Cursor UI.",
     "developerName": "Vanyangyang",
     "category": "Developer Tools",
@@ -30,9 +30,9 @@
       "Interactive"
     ],
     "defaultPrompt": [
+      "Continue a saved Cursor connection by name without re-entering its host or path.",
       "Find where this project implements a behavior and return verified path:line evidence.",
-      "Delegate one clearly bounded implementation task to Cursor and verify the real changes.",
-      "Initialize CCE workspace to C:\\absolute\\project\\path."
+      "Delegate one clearly bounded read-only task to Cursor and review its result."
     ],
     "websiteURL": "https://github.com/Vanyangyang/cursor-bridge"
   }

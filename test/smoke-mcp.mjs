@@ -11,6 +11,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 const requiredTools = [
   'cursor_init', 'cursor_context_engine', 'cursor_do', 'cursor_task_control',
   'cursor_session_control', 'cursor_runtime', 'cursor_model', 'cursor_status',
+  'cursor_ssh_init', 'cursor_ssh_session', 'cursor_connection', 'cursor_connection_send',
 ];
 
 function payload(result) {
@@ -44,6 +45,7 @@ async function smoke() {
     CURSOR_BRIDGE_RUNTIME_FILE: join(scratch, 'runtime.json'),
     CURSOR_BRIDGE_MODEL_PREFERENCES_FILE: join(scratch, 'models.json'),
     CURSOR_BRIDGE_SESSION_FILE: join(scratch, 'sessions.json'),
+    CURSOR_BRIDGE_CONNECTIONS_FILE: join(scratch, 'connections.json'),
   };
   let client;
   // Reserve a private port and reject its probes, so status never contacts a real Cursor.
@@ -55,6 +57,7 @@ async function smoke() {
       { version: 1, mode: 'normal' },
       { version: 1, targets: { cce: null, cursor_do: null }, updatedAt: null },
       { version: 1, sessions: {}, updatedAt: null },
+      { version: 1, connections: {} },
     ];
     const snapshots = Object.values(files).map((file, index) => {
       const text = `${JSON.stringify(configs[index])}\n`;
@@ -111,6 +114,11 @@ async function smoke() {
     }
     const before = await status();
     assert.deepEqual(before.recentTasks, []);
+    const connections = await call('cursor_connection', { action: 'list' });
+    assert.notEqual(connections.isError, true);
+    assert.deepEqual(payload(connections).connections, []);
+    const missingConnection = await call('cursor_connection', { action: 'get', name: 'missing' });
+    assert.equal(missingConnection.isError, true);
     const probes = [
       ['cursor_context_engine', { query: 'Admission smoke probe; must never reach Cursor.', workspace_path: workspace }],
       ['cursor_do', { prompt: 'Admission smoke probe; must never reach Cursor.', workspace_path: workspace, read_only: true }],

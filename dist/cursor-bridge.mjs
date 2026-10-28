@@ -2990,7 +2990,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve9.call(this, root, ref);
+      let _sch = resolve10.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a3 = root.localRefs) === null || _a3 === void 0 ? void 0 : _a3[ref];
         const { schemaId } = this.opts;
@@ -3017,7 +3017,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve9(root, ref) {
+    function resolve10(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3881,7 +3881,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve9(baseURI, relativeURI, options) {
+    function resolve10(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const {
         parsed: baseParsed,
@@ -4272,7 +4272,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve: resolve9,
+      resolve: resolve10,
       resolveComponent,
       equal,
       serialize,
@@ -11877,18 +11877,18 @@ function findCursorExe(options = {}) {
   return findCursorExeDetails(options)?.path || null;
 }
 function cdpUp(timeoutMs = 1500) {
-  return new Promise((resolve9) => {
+  return new Promise((resolve10) => {
     const req = http.get({ host: CDP_HOST, port: CDP_PORT, path: "/json/version" }, (res) => {
       res.resume();
-      resolve9(res.statusCode === 200);
+      resolve10(res.statusCode === 200);
     });
-    req.on("error", () => resolve9(false));
+    req.on("error", () => resolve10(false));
     req.setTimeout(timeoutMs, () => {
       try {
         req.destroy();
       } catch {
       }
-      resolve9(false);
+      resolve10(false);
     });
   });
 }
@@ -11898,25 +11898,25 @@ function cdpListIsCursor(payload) {
   return CURSOR_CDP_PATH.test(d);
 }
 function cdpIsCursor(timeoutMs = 1500) {
-  return new Promise((resolve9) => {
+  return new Promise((resolve10) => {
     const req = http.get({ host: CDP_HOST, port: CDP_PORT, path: "/json/list" }, (res) => {
       let d = "";
       res.on("data", (c) => d += c);
       res.on("end", () => {
         try {
-          resolve9(cdpListIsCursor(d));
+          resolve10(cdpListIsCursor(d));
         } catch {
-          resolve9(false);
+          resolve10(false);
         }
       });
     });
-    req.on("error", () => resolve9(false));
+    req.on("error", () => resolve10(false));
     req.setTimeout(timeoutMs, () => {
       try {
         req.destroy();
       } catch {
       }
-      resolve9(false);
+      resolve10(false);
     });
   });
 }
@@ -12630,17 +12630,17 @@ import net from "node:net";
 import { createHash as createHash3 } from "node:crypto";
 import {
   existsSync as existsSync4,
-  mkdirSync as mkdirSync7,
-  readFileSync as readFileSync6,
+  mkdirSync as mkdirSync8,
+  readFileSync as readFileSync7,
   realpathSync,
   readdirSync,
-  renameSync as renameSync6,
-  rmSync as rmSync6,
+  renameSync as renameSync7,
+  rmSync as rmSync7,
   unlinkSync,
-  writeFileSync as writeFileSync6
+  writeFileSync as writeFileSync7
 } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { basename as basename5, dirname as dirname6, join as join8, resolve as resolve7, win32 as win32Path } from "node:path";
+import { basename as basename6, dirname as dirname7, join as join9, resolve as resolve8, win32 as win32Path } from "node:path";
 function resolveSupervisorSpawnCwd({
   requestedCwd = null,
   runtimeRoot = null,
@@ -12655,9 +12655,9 @@ function resolveSupervisorSpawnCwd({
   return runtimeRoot;
 }
 function resolvePluginLocalLifecycleDir(sourceScript) {
-  const scriptDir = dirname6(resolve7(sourceScript));
-  const pluginRoot = basename5(scriptDir).toLowerCase() === "dist" ? dirname6(scriptDir) : scriptDir;
-  return join8(pluginRoot, ".cursor-bridge-lifecycle");
+  const scriptDir = dirname7(resolve8(sourceScript));
+  const pluginRoot = basename6(scriptDir).toLowerCase() === "dist" ? dirname7(scriptDir) : scriptDir;
+  return join9(pluginRoot, ".cursor-bridge-lifecycle");
 }
 function inspectWindowsAppContainerPath(target, options = {}) {
   const platform = options.platform || process.platform;
@@ -12700,59 +12700,59 @@ function sleep(ms) {
 }
 function resolveSupervisorScript() {
   if (process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT && existsSync4(process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT)) {
-    return resolve7(process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT);
+    return resolve8(process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT);
   }
-  const here = dirname6(fileURLToPath(import.meta.url));
+  const here = dirname7(fileURLToPath(import.meta.url));
   const candidates = [];
   if (typeof process.argv[1] === "string") {
-    const entryDir = dirname6(resolve7(process.argv[1]));
-    candidates.push(join8(entryDir, "dist", "cursor-lifecycle-supervisor.mjs"));
-    candidates.push(join8(entryDir, "cursor-lifecycle-supervisor.mjs"));
+    const entryDir = dirname7(resolve8(process.argv[1]));
+    candidates.push(join9(entryDir, "dist", "cursor-lifecycle-supervisor.mjs"));
+    candidates.push(join9(entryDir, "cursor-lifecycle-supervisor.mjs"));
   }
   candidates.push(
-    join8(here, "dist", "cursor-lifecycle-supervisor.mjs"),
-    join8(here, "cursor-lifecycle-supervisor.mjs")
+    join9(here, "dist", "cursor-lifecycle-supervisor.mjs"),
+    join9(here, "cursor-lifecycle-supervisor.mjs")
   );
   for (const c of candidates) {
     if (existsSync4(c)) return c;
   }
-  return join8(here, "cursor-lifecycle-supervisor.mjs");
+  return join9(here, "cursor-lifecycle-supervisor.mjs");
 }
 function writeRuntimeFile(target, content) {
-  if (existsSync4(target) && readFileSync6(target).equals(content)) return;
+  if (existsSync4(target) && readFileSync7(target).equals(content)) return;
   const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
-  writeFileSync6(temporary, content);
+  writeFileSync7(temporary, content);
   try {
-    renameSync6(temporary, target);
+    renameSync7(temporary, target);
   } catch (error2) {
     if (!existsSync4(target)) {
-      rmSync6(temporary, { force: true });
+      rmSync7(temporary, { force: true });
       throw error2;
     }
-    if (readFileSync6(target).equals(content)) {
-      rmSync6(temporary, { force: true });
+    if (readFileSync7(target).equals(content)) {
+      rmSync7(temporary, { force: true });
       return;
     }
-    rmSync6(target, { force: true });
-    renameSync6(temporary, target);
+    rmSync7(target, { force: true });
+    renameSync7(temporary, target);
   }
 }
 function materializeLifecycleSupervisorRuntime({ sourceScript, dir = defaultLifecycleDir() } = {}) {
   const described = describeLifecycleSupervisorRuntime({ sourceScript, dir });
   const { sourceScript: source, content, fingerprint } = described;
-  const runtimeRoot = join8(ensureLifecycleDir(dir), "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
-  mkdirSync7(runtimeRoot, { recursive: true });
-  const script = join8(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
+  const runtimeRoot = join9(ensureLifecycleDir(dir), "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
+  mkdirSync8(runtimeRoot, { recursive: true });
+  const script = join9(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
   writeRuntimeFile(script, content);
   return { sourceScript: source, script, runtimeRoot, fingerprint };
 }
 function describeLifecycleSupervisorRuntime({ sourceScript, dir = defaultLifecycleDir() } = {}) {
-  const source = resolve7(sourceScript || resolveSupervisorScript());
+  const source = resolve8(sourceScript || resolveSupervisorScript());
   if (!existsSync4(source)) throw new Error(`lifecycle supervisor script missing: ${source}`);
-  const content = readFileSync6(source);
+  const content = readFileSync7(source);
   const fingerprint = createHash3("sha256").update(content).digest("hex");
-  const runtimeRoot = join8(dir, "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
-  const script = join8(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
+  const runtimeRoot = join9(dir, "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
+  const script = join9(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
   return { sourceScript: source, script, runtimeRoot, fingerprint, content };
 }
 function isProcessAlive(pid) {
@@ -12766,7 +12766,7 @@ function isProcessAlive(pid) {
 }
 function readPidFile(pidPath) {
   try {
-    const n = Number(String(readFileSync6(pidPath, "utf8")).trim());
+    const n = Number(String(readFileSync7(pidPath, "utf8")).trim());
     return Number.isFinite(n) ? n : null;
   } catch {
     return null;
@@ -12881,7 +12881,7 @@ function tryUnlink(path) {
   }
 }
 function writeBootEnv(dir, extra = {}) {
-  const bootPath = join8(dir, `boot-env-${process.pid}-${Date.now()}.json`);
+  const bootPath = join9(dir, `boot-env-${process.pid}-${Date.now()}.json`);
   const payload = { ...extra };
   for (const [key, value] of Object.entries(process.env)) {
     if (key.startsWith("CURSOR_BRIDGE_") || key === "CURSOR_PROJECT_PATH" || key === "CURSOR_EXE") {
@@ -12892,7 +12892,7 @@ function writeBootEnv(dir, extra = {}) {
   for (const [k, v] of Object.entries(payload)) {
     if (v != null && v !== "") cleaned[k] = String(v);
   }
-  writeFileSync6(bootPath, `${JSON.stringify(cleaned, null, 2)}
+  writeFileSync7(bootPath, `${JSON.stringify(cleaned, null, 2)}
 `, { encoding: "utf8" });
   return bootPath;
 }
@@ -12927,9 +12927,9 @@ async function ensureSupervisorConnected(options = {}) {
     let targetRuntime = null;
     try {
       targetRuntime = options.persistSupervisorRuntime === false ? {
-        sourceScript: resolve7(sourceScript),
-        script: resolve7(sourceScript),
-        runtimeRoot: dirname6(resolve7(sourceScript)),
+        sourceScript: resolve8(sourceScript),
+        script: resolve8(sourceScript),
+        runtimeRoot: dirname7(resolve8(sourceScript)),
         fingerprint: null
       } : describeLifecycleSupervisorRuntime({ sourceScript, dir });
     } catch {
@@ -13013,9 +13013,9 @@ async function ensureSupervisorConnected(options = {}) {
   try {
     ensureLifecycleDir(dir);
     runtime = options.persistSupervisorRuntime === false ? {
-      sourceScript: resolve7(sourceScript),
-      script: resolve7(sourceScript),
-      runtimeRoot: dirname6(resolve7(sourceScript)),
+      sourceScript: resolve8(sourceScript),
+      script: resolve8(sourceScript),
+      runtimeRoot: dirname7(resolve8(sourceScript)),
       fingerprint: null
     } : (options.materializeRuntimeImpl || materializeLifecycleSupervisorRuntime)({ sourceScript, dir });
   } catch (error2) {
@@ -16682,7 +16682,7 @@ var recursive = /* @__PURE__ */ new WeakMap();
 var NONE = 0;
 var ASSUMED = 1;
 var PROVEN = 2;
-function isRecursive(inst, stack, resolve9) {
+function isRecursive(inst, stack, resolve10) {
   const cached2 = recursive.get(inst);
   if (cached2 !== void 0)
     return cached2 ? PROVEN : NONE;
@@ -16692,7 +16692,7 @@ function isRecursive(inst, stack, resolve9) {
   let result = NONE;
   const check = (child) => {
     if (result !== PROVEN && child?._zod) {
-      const answer = isRecursive(child, stack, resolve9);
+      const answer = isRecursive(child, stack, resolve10);
       if (answer > result)
         result = answer;
     }
@@ -16703,7 +16703,7 @@ function isRecursive(inst, stack, resolve9) {
       const desc = Object.getOwnPropertyDescriptor(sh, key);
       if (spread && !desc.enumerable)
         continue;
-      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve9) : NONE;
+      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve10) : NONE;
       if (child > answer)
         answer = child;
     }
@@ -16767,7 +16767,7 @@ function isRecursive(inst, stack, resolve9) {
       break;
     // `$ZodLazy` caches its inner on the def, so a resolved edge is followed exactly
     case "lazy": {
-      const inner = def._cachedInner ?? (resolve9 ? inst._zod.innerType : void 0);
+      const inner = def._cachedInner ?? (resolve10 ? inst._zod.innerType : void 0);
       merge2(inner ? isRecursive(inner, stack, false) : ASSUMED);
       break;
     }
@@ -21869,7 +21869,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve9) => setTimeout(resolve9, pollInterval));
+        await new Promise((resolve10) => setTimeout(resolve10, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -21886,7 +21886,7 @@ var Protocol = class {
    */
   request(request2, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve9, reject) => {
+    return new Promise((resolve10, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -21964,7 +21964,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve9(parseResult.data);
+            resolve10(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -22226,12 +22226,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve9, reject) => {
+    return new Promise((resolve10, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve9, interval);
+      const timeoutId = setTimeout(resolve10, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -23107,20 +23107,20 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve9) => {
+    return new Promise((resolve10) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve9();
+        resolve10();
       } else {
-        this._stdout.once("drain", resolve9);
+        this._stdout.once("drain", resolve10);
       }
     });
   }
 };
 
 // server.mjs
-import { basename as basename6, dirname as dirname7, join as join9, resolve as resolve8 } from "node:path";
-import { statSync as statSync3 } from "node:fs";
+import { basename as basename7, dirname as dirname8, join as join10, resolve as resolve9 } from "node:path";
+import { statSync as statSync4 } from "node:fs";
 
 // node_modules/ws/wrapper.mjs
 var import_stream = __toESM(require_stream(), 1);
@@ -23182,8 +23182,8 @@ function makeClient(wsUrl, options = {}) {
   let readyResolve;
   let readyReject;
   const pending = /* @__PURE__ */ new Map();
-  const ready = new Promise((resolve9, reject) => {
-    readyResolve = resolve9;
+  const ready = new Promise((resolve10, reject) => {
+    readyResolve = resolve10;
     readyReject = reject;
   });
   void ready.catch(() => {
@@ -23334,7 +23334,7 @@ function makeClient(wsUrl, options = {}) {
         elapsedMs: 0
       }));
     }
-    return new Promise((resolve9, reject) => {
+    return new Promise((resolve10, reject) => {
       const startedAt = Date.now();
       const timer = setTimeout(() => {
         if (!pending.delete(id)) return;
@@ -23345,7 +23345,7 @@ function makeClient(wsUrl, options = {}) {
           elapsedMs: Date.now() - startedAt
         }));
       }, timeoutMs);
-      pending.set(id, { method, resolve: resolve9, reject, timer, startedAt });
+      pending.set(id, { method, resolve: resolve10, reject, timer, startedAt });
       try {
         ws.send(payload, (cause) => {
           if (!cause || !pending.has(id)) return;
@@ -23795,8 +23795,444 @@ function inspectSshWindowIdentity(raw, expectedWorkspace) {
   return { ok: true, workspace: expected, remoteAuthority };
 }
 
+// connection-controller.mjs
+init_remote_workspace();
+
+// named-connections.mjs
+init_remote_workspace();
+import { randomUUID as randomUUID2 } from "node:crypto";
+import {
+  closeSync as closeSync2,
+  mkdirSync as mkdirSync7,
+  openSync as openSync2,
+  readFileSync as readFileSync6,
+  renameSync as renameSync6,
+  rmSync as rmSync6,
+  statSync as statSync3,
+  writeFileSync as writeFileSync6
+} from "node:fs";
+import { basename as basename5, dirname as dirname6, isAbsolute as isAbsolute2, join as join8, resolve as resolve7 } from "node:path";
+import { homedir as homedir8 } from "node:os";
+var NAMED_CONNECTIONS_VERSION = 1;
+var CONNECTION_FIELDS = Object.freeze([
+  "name",
+  "uri",
+  "sessionId",
+  "revision",
+  "createdAt",
+  "updatedAt"
+]);
+var TOP_LEVEL_FIELDS = Object.freeze(["version", "connections"]);
+var PROTOTYPE_NAMES = /* @__PURE__ */ new Set(["constructor", "prototype"]);
+var SESSION_ID_PATTERN = /^cursor-session-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+function namedConnectionsError(code, message, cause) {
+  const error2 = new Error(`${code}: ${message}`);
+  error2.code = code;
+  if (cause) error2.cause = cause;
+  return error2;
+}
+function canonicalName(value) {
+  if (typeof value !== "string") {
+    throw namedConnectionsError("NAMED_CONNECTION_NAME_INVALID", "name must be a string");
+  }
+  const name = value.trim().toLowerCase();
+  if (name.length > 64 || !/^[a-z0-9][a-z0-9._-]*$/.test(name) || PROTOTYPE_NAMES.has(name)) {
+    throw namedConnectionsError(
+      "NAMED_CONNECTION_NAME_INVALID",
+      "name must be 1-64 ASCII letters/digits/dot/underscore/dash, start with a letter or digit, and not be a prototype key"
+    );
+  }
+  return name;
+}
+function canonicalUri(value) {
+  if (!isSshWorkspaceUri(value)) {
+    throw namedConnectionsError("NAMED_CONNECTION_URI_INVALID", "uri must be a vscode-remote SSH workspace URI");
+  }
+  try {
+    return parseSshWorkspace(value).uri;
+  } catch (error2) {
+    throw namedConnectionsError("NAMED_CONNECTION_URI_INVALID", error2.message, error2);
+  }
+}
+function canonicalSessionId(value) {
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw namedConnectionsError("NAMED_CONNECTION_SESSION_ID_INVALID", "sessionId must be null or a cursor-session UUID");
+  }
+  const match = value.match(SESSION_ID_PATTERN);
+  if (!match) {
+    throw namedConnectionsError("NAMED_CONNECTION_SESSION_ID_INVALID", "sessionId must use the cursor-session-UUID format");
+  }
+  return `cursor-session-${match[1].toLowerCase()}`;
+}
+function validateRevision(value, { allowZero = false } = {}) {
+  const minimum = allowZero ? 0 : 1;
+  if (!Number.isSafeInteger(value) || value < minimum) {
+    throw namedConnectionsError(
+      "NAMED_CONNECTION_REVISION_INVALID",
+      `revision must be a safe integer of at least ${minimum}`
+    );
+  }
+  return value;
+}
+function validateTimestamp(value, fieldName) {
+  if (typeof value !== "string") {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `${fieldName} must be an ISO timestamp`);
+  }
+  const time3 = Date.parse(value);
+  if (!Number.isFinite(time3) || new Date(time3).toISOString() !== value) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `${fieldName} must be a canonical ISO timestamp`);
+  }
+  return time3;
+}
+function isObjectRecord(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function assertExactFields(value, fields, context) {
+  const actual = Object.keys(value).sort();
+  const expected = [...fields].sort();
+  if (actual.length !== expected.length || actual.some((field, index) => field !== expected[index])) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `${context} has missing or unsupported fields`);
+  }
+}
+function validateConnectionRecord(record2, key) {
+  if (!isObjectRecord(record2)) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `connection ${key} must be an object`);
+  }
+  assertExactFields(record2, CONNECTION_FIELDS, `connection ${key}`);
+  const name = canonicalName(record2.name);
+  if (name !== key || record2.name !== name) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `connection key ${key} must match its canonical name`);
+  }
+  const uri = canonicalUri(record2.uri);
+  if (uri !== record2.uri) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `connection ${key} URI is not canonical`);
+  }
+  const sessionId = canonicalSessionId(record2.sessionId);
+  if (sessionId !== record2.sessionId) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `connection ${key} sessionId is not canonical`);
+  }
+  const revision = validateRevision(record2.revision);
+  const createdAt = validateTimestamp(record2.createdAt, `connection ${key} createdAt`);
+  const updatedAt = validateTimestamp(record2.updatedAt, `connection ${key} updatedAt`);
+  if (updatedAt < createdAt) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `connection ${key} updatedAt precedes createdAt`);
+  }
+  return { name, uri, sessionId, revision, createdAt: record2.createdAt, updatedAt: record2.updatedAt };
+}
+function emptyNamedConnections() {
+  return { version: NAMED_CONNECTIONS_VERSION, connections: {} };
+}
+function resolveNamedConnectionsFile(env = process.env) {
+  const configured = String(env.CURSOR_BRIDGE_CONNECTIONS_FILE || "").trim();
+  if (configured) return resolve7(configured);
+  const appData = String(env.APPDATA || "").trim();
+  const configRoot = appData && isAbsolute2(appData) ? appData : join8(homedir8(), "AppData", "Roaming");
+  return resolve7(configRoot, "cursor-bridge", "connections-v1.json");
+}
+function readNamedConnections(filePath) {
+  if (!filePath) return emptyNamedConnections();
+  let text;
+  try {
+    text = readFileSync6(filePath, "utf8");
+  } catch (error2) {
+    if (error2 && error2.code === "ENOENT") return emptyNamedConnections();
+    throw namedConnectionsError(
+      "NAMED_CONNECTIONS_READ_FAILED",
+      `failed to read ${filePath}: ${error2 instanceof Error ? error2.message : String(error2)}`,
+      error2
+    );
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error2) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `failed to parse ${filePath}`, error2);
+  }
+  if (!isObjectRecord(parsed) || parsed.version !== NAMED_CONNECTIONS_VERSION) {
+    throw namedConnectionsError(
+      "NAMED_CONNECTIONS_SCHEMA_UNSUPPORTED",
+      `expected version ${NAMED_CONNECTIONS_VERSION}, received ${parsed && parsed.version}`
+    );
+  }
+  assertExactFields(parsed, TOP_LEVEL_FIELDS, "named connections registry");
+  if (!isObjectRecord(parsed.connections)) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", "connections must be an object");
+  }
+  const connections = {};
+  for (const key of Object.keys(parsed.connections)) {
+    const name = canonicalName(key);
+    if (name !== key) {
+      throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `connection key ${key} is not canonical`);
+    }
+    connections[name] = validateConnectionRecord(parsed.connections[key], name);
+  }
+  return { version: NAMED_CONNECTIONS_VERSION, connections };
+}
+function getNamedConnection(filePath, nameValue) {
+  const name = canonicalName(nameValue);
+  const state = readNamedConnections(filePath);
+  return Object.hasOwn(state.connections, name) ? { ...state.connections[name] } : null;
+}
+function listNamedConnections(filePath) {
+  const state = readNamedConnections(filePath);
+  return Object.keys(state.connections).sort().map((name) => ({ ...state.connections[name] }));
+}
+function acquireConnectionLock(filePath, options = {}) {
+  const lockPath = `${resolve7(filePath)}.lock`;
+  const waitMs = Number(options.waitMs ?? 2e3);
+  const staleMs = Number(options.staleMs ?? 3e4);
+  const deadline = Date.now() + waitMs;
+  mkdirSync7(dirname6(lockPath), { recursive: true });
+  for (; ; ) {
+    try {
+      const handle = openSync2(lockPath, "wx", 384);
+      closeSync2(handle);
+      return () => rmSync6(lockPath, { force: true });
+    } catch (error2) {
+      if (!error2 || error2.code !== "EEXIST") {
+        throw namedConnectionsError(
+          "NAMED_CONNECTIONS_LOCK_FAILED",
+          error2 instanceof Error ? error2.message : String(error2),
+          error2
+        );
+      }
+      try {
+        if (Date.now() - statSync3(lockPath).mtimeMs > staleMs) {
+          rmSync6(lockPath, { force: true });
+          continue;
+        }
+      } catch {
+      }
+      if (Date.now() >= deadline) {
+        throw namedConnectionsError("NAMED_CONNECTIONS_BUSY", "another process is updating named connections");
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+    }
+  }
+}
+function writeNamedConnections(filePath, state) {
+  const target = resolve7(filePath);
+  const validated = readNamedConnectionsFromState(state);
+  mkdirSync7(dirname6(target), { recursive: true });
+  const temporary = join8(dirname6(target), `.${basename5(target)}.${process.pid}.${randomUUID2()}.tmp`);
+  try {
+    writeFileSync6(temporary, `${JSON.stringify(validated, null, 2)}
+`, { encoding: "utf8", mode: 384 });
+    renameSync6(temporary, target);
+  } catch (error2) {
+    rmSync6(temporary, { force: true });
+    throw namedConnectionsError(
+      "NAMED_CONNECTIONS_WRITE_FAILED",
+      `failed to persist ${target}: ${error2 instanceof Error ? error2.message : String(error2)}`,
+      error2
+    );
+  }
+  return validated;
+}
+function readNamedConnectionsFromState(state) {
+  if (!isObjectRecord(state) || state.version !== NAMED_CONNECTIONS_VERSION || !isObjectRecord(state.connections)) {
+    throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", "invalid in-memory connection state");
+  }
+  const connections = {};
+  for (const key of Object.keys(state.connections)) {
+    const name = canonicalName(key);
+    if (name !== key) throw namedConnectionsError("NAMED_CONNECTIONS_INVALID", `connection key ${key} is not canonical`);
+    connections[name] = validateConnectionRecord(state.connections[key], name);
+  }
+  return { version: NAMED_CONNECTIONS_VERSION, connections };
+}
+function updateNamedConnections(filePath, mutator, options = {}) {
+  if (!filePath) throw namedConnectionsError("NAMED_CONNECTIONS_PATH_REQUIRED", "filePath is required for updates");
+  const target = resolve7(filePath);
+  const release = acquireConnectionLock(target, options);
+  try {
+    const state = readNamedConnections(target);
+    const result = mutator(state);
+    writeNamedConnections(target, state);
+    return result;
+  } finally {
+    release();
+  }
+}
+function assertExpectedRevision(expectedRevision, currentRevision, name) {
+  if (expectedRevision === void 0) return;
+  validateRevision(expectedRevision, { allowZero: true });
+  if (expectedRevision !== currentRevision) {
+    throw namedConnectionsError(
+      "NAMED_CONNECTION_REVISION_CONFLICT",
+      `connection ${name} revision is ${currentRevision}; expected ${expectedRevision}`
+    );
+  }
+}
+function saveNamedConnection(filePath, input, { replace = false, expectedRevision, ...lockOptions } = {}) {
+  if (!isObjectRecord(input)) {
+    throw namedConnectionsError("NAMED_CONNECTION_INVALID", "connection input must be an object");
+  }
+  const allowedInputFields = ["name", "uri", "sessionId"];
+  if (Object.keys(input).some((key) => !allowedInputFields.includes(key)) || !Object.hasOwn(input, "name") || !Object.hasOwn(input, "uri")) {
+    throw namedConnectionsError("NAMED_CONNECTION_INVALID", "connection input must contain only name, uri, and optional sessionId");
+  }
+  const name = canonicalName(input.name);
+  const uri = canonicalUri(input.uri);
+  const hasSessionId = Object.hasOwn(input, "sessionId") && input.sessionId !== void 0;
+  const suppliedSessionId = hasSessionId ? canonicalSessionId(input.sessionId) : null;
+  const replaceExisting = replace === true;
+  return updateNamedConnections(filePath, (state) => {
+    const existing = Object.hasOwn(state.connections, name) ? state.connections[name] : null;
+    assertExpectedRevision(expectedRevision, existing ? existing.revision : 0, name);
+    if (existing && existing.uri !== uri && !replaceExisting) {
+      throw namedConnectionsError("NAMED_CONNECTION_REPLACE_REQUIRED", `connection ${name} already points to another SSH workspace`);
+    }
+    const sameUri = existing?.uri === uri;
+    const sessionId = hasSessionId ? suppliedSessionId : sameUri ? existing.sessionId : null;
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const record2 = {
+      name,
+      uri,
+      sessionId,
+      revision: existing ? existing.revision + 1 : 1,
+      createdAt: existing ? existing.createdAt : now,
+      updatedAt: now
+    };
+    state.connections[name] = record2;
+    return { ...record2 };
+  }, lockOptions);
+}
+function setNamedConnectionSession(filePath, nameValue, sessionIdValue, { expectedRevision, uri: uriValue, ...lockOptions } = {}) {
+  const name = canonicalName(nameValue);
+  const sessionId = canonicalSessionId(sessionIdValue);
+  if (expectedRevision === void 0) {
+    throw namedConnectionsError("NAMED_CONNECTION_EXPECTED_REVISION_REQUIRED", "expectedRevision is required");
+  }
+  validateRevision(expectedRevision);
+  const uri = canonicalUri(uriValue);
+  return updateNamedConnections(filePath, (state) => {
+    const existing = Object.hasOwn(state.connections, name) ? state.connections[name] : null;
+    if (!existing) throw namedConnectionsError("NAMED_CONNECTION_NOT_FOUND", `connection ${name} does not exist`);
+    assertExpectedRevision(expectedRevision, existing.revision, name);
+    if (existing.uri !== uri) {
+      throw namedConnectionsError("NAMED_CONNECTION_URI_CONFLICT", `connection ${name} no longer points to the expected SSH workspace`);
+    }
+    const record2 = {
+      ...existing,
+      sessionId,
+      revision: existing.revision + 1,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    state.connections[name] = record2;
+    return { ...record2 };
+  }, lockOptions);
+}
+
+// connection-controller.mjs
+function failure3(code, message) {
+  const error2 = new Error(`${code}: ${message}`);
+  error2.code = code;
+  return error2;
+}
+var NamedConnectionController = class {
+  constructor(bridge2, options = {}) {
+    this.bridge = bridge2;
+    this.file = options.file || resolveNamedConnectionsFile();
+  }
+  list() {
+    return { connections: listNamedConnections(this.file), defaultBehavior: "continue-saved-session" };
+  }
+  _require(name) {
+    const connection = getNamedConnection(this.file, name);
+    if (!connection) throw failure3("CONNECTION_NOT_FOUND", `No saved connection named ${name}; list saved names or explicitly save the target once`);
+    return connection;
+  }
+  _session(connection, sessionId = connection.sessionId) {
+    if (!sessionId) return null;
+    const session = this.bridge._readSession(sessionId);
+    if (!session) throw failure3("CONNECTION_SESSION_NOT_FOUND", "The saved session is absent from this adapter's shared session registry; do not silently create a replacement");
+    if (parseSshWorkspace(session.projectPath).uri !== connection.uri || session.collaborationKind !== "ssh-read-only" || session.scopeEnvelope?.readOnly !== true || !session.agentId && !session.activeTaskId) {
+      throw failure3("CONNECTION_SESSION_MISMATCH", "The saved session must have the same exact SSH workspace, a bound Agent, and a read-only scope");
+    }
+    return session;
+  }
+  get(name) {
+    const connection = this._require(name);
+    const session = connection.sessionId ? this.bridge._readSession(connection.sessionId) : null;
+    return {
+      ...connection,
+      workspace: parseSshWorkspace(connection.uri),
+      defaultBehavior: connection.sessionId ? "continue" : "create-first-session",
+      session: session ? this.bridge._sessionView(session) : null,
+      sessionAvailable: !connection.sessionId || !!session
+    };
+  }
+  save(input, options = {}) {
+    const uri = parseSshWorkspace(input.uri).uri;
+    if (input.sessionId) this._session({ uri, sessionId: input.sessionId });
+    return saveNamedConnection(this.file, { ...input, uri }, options);
+  }
+  async send(name, prompt, options = {}) {
+    const connection = this._require(name);
+    const requestId = typeof options.requestId === "string" ? options.requestId.trim() : "";
+    if (!requestId || requestId.length > 200) throw failure3("CONNECTION_REQUEST_ID_REQUIRED", "Supply one unique request_id of at most 200 characters for each turn");
+    const previous = connection.sessionId ? this._session(connection) : null;
+    if (previous?.lastRequestId === requestId) {
+      const taskId = previous.activeTaskId || previous.lastTask?.taskId || null;
+      const task = taskId && this.bridge.tasks.get(taskId);
+      return {
+        duplicate: true,
+        connectionName: connection.name,
+        sessionReused: true,
+        ...task ? this.bridge._compactTaskView(task) : this.bridge._sessionView(previous),
+        taskId,
+        taskProcessLocal: !!task,
+        connectionRevision: connection.revision
+      };
+    }
+    if (previous && !options.newSession && (previous.activeTaskId || ["creating", "busy", "needs_attention"].includes(previous.state))) {
+      throw failure3("CONNECTION_SESSION_BUSY", `Session ${previous.id} needs completion or explicit reconciliation; no prompt was sent`);
+    }
+    if (previous && !options.newSession && ["closed", "failed"].includes(previous.state)) {
+      throw failure3("CONNECTION_SESSION_CLOSED", "The saved session cannot continue; request new_session=true only when a new Agent is intended");
+    }
+    await this.bridge.initializeSshWorkspace(connection.uri, { targetId: options.targetId || "" });
+    const sessionId = options.newSession ? void 0 : connection.sessionId || void 0;
+    const receipt = await this.bridge.sshSessionTurn(prompt, {
+      ...options,
+      sessionId,
+      requestId,
+      workspacePath: connection.uri
+    });
+    if (!receipt.sessionId) throw failure3("CONNECTION_SESSION_UNBOUND", "No durable Bridge session was returned; inspect the original task before retrying");
+    let saved;
+    try {
+      saved = setNamedConnectionSession(
+        this.file,
+        connection.name,
+        receipt.sessionId,
+        { expectedRevision: connection.revision, uri: connection.uri }
+      );
+    } catch (error2) {
+      return {
+        ...receipt,
+        connectionName: connection.name,
+        sessionReused: !!sessionId,
+        connectionUpdated: false,
+        warningCode: "CONNECTION_MAPPING_CHANGED_AFTER_SUBMISSION",
+        warning: `${error2.message}; the task was already submitted. Collect that exact task; do not resend automatically.`
+      };
+    }
+    return {
+      ...receipt,
+      connectionName: saved.name,
+      sessionReused: !!sessionId,
+      connectionUpdated: true,
+      connectionRevision: saved.revision,
+      workspaceUri: saved.uri
+    };
+  }
+};
+
 // server.mjs
-var PLUGIN_VERSION = "6.0.9-ssh.1";
+var PLUGIN_VERSION = "6.0.9-ssh.2";
 var CDP_PORT2 = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 var ORIGIN = `http://localhost:${CDP_PORT2}`;
 var QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 3e5);
@@ -23823,8 +24259,8 @@ function sameSessionProject(left, right) {
   if (isSshWorkspaceUri(left) || isSshWorkspaceUri(right)) {
     return isSshWorkspaceUri(left) && isSshWorkspaceUri(right) && parseSshWorkspace(left).uri === parseSshWorkspace(right).uri;
   }
-  const a = resolve8(String(left || ""));
-  const b = resolve8(String(right || ""));
+  const a = resolve9(String(left || ""));
+  const b = resolve9(String(right || ""));
   return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
 }
 function searchResultContract() {
@@ -23905,13 +24341,13 @@ var DO_DEFAULT_CONTRACT = "\n\nCompletion requirements: Work directly in the wor
 var DO_LANGUAGE_CONTRACT = "\n\nResponse language: Reply in the language of the user task unless it explicitly requests another language. Never translate paths, commands, identifiers, keys, enum values, exact options, or error/status codes.";
 var CDP_HOST2 = "127.0.0.1";
 function httpJson(path) {
-  return new Promise((resolve9, reject) => {
+  return new Promise((resolve10, reject) => {
     const req = http2.get({ host: CDP_HOST2, port: CDP_PORT2, path }, (res) => {
       let d = "";
       res.on("data", (c) => d += c);
       res.on("end", () => {
         try {
-          resolve9(JSON.parse(d));
+          resolve10(JSON.parse(d));
         } catch {
           reject(new Error("CDP returned a non-JSON response"));
         }
@@ -25344,16 +25780,16 @@ function lifecycleFailureSummary(lifecycle, fallback) {
   return [lifecycle.message || fallback, `[${diagnostic}]`, original].filter(Boolean).join(" ");
 }
 function releaseAdapterWorkingDirectory({ targetDir = null, chdir = process.chdir } = {}) {
-  const target = targetDir ? ensureLifecycleDir(targetDir) : dirname7(process.execPath);
+  const target = targetDir ? ensureLifecycleDir(targetDir) : dirname8(process.execPath);
   chdir(target);
   return target;
 }
 var CursorBridge = class {
   constructor(options = {}) {
-    this.adapterStartCwd = resolve8(options.adapterStartCwd || process.cwd());
+    this.adapterStartCwd = resolve9(options.adapterStartCwd || process.cwd());
     this.environmentDelegationMode = normalizeDelegationMode(options.delegationMode || DELEGATION_MODE);
     this._syncDelegationState();
-    this.runtimeFile = options.runtimeFile === null ? null : resolve8(options.runtimeFile || resolveCursorRuntimeFile());
+    this.runtimeFile = options.runtimeFile === null ? null : resolve9(options.runtimeFile || resolveCursorRuntimeFile());
     this.runtimeModeDefault = normalizeCursorRuntimeMode(
       options.runtimeModeDefault || process.env.CURSOR_BRIDGE_RUNTIME_MODE,
       "normal"
@@ -25364,17 +25800,17 @@ var CursorBridge = class {
     this.runtimeMode = normalizeCursorRuntimeMode(requestedRuntimeMode);
     this.runtimeModeSource = options.runtimeMode !== void 0 ? "constructor" : persistedRuntimeMode ? "persistent" : process.env.CURSOR_BRIDGE_RUNTIME_MODE ? "environment" : "default";
     this.runtimeModeScope = persistedRuntimeMode ? "persistent" : options.runtimeMode !== void 0 ? "constructor" : process.env.CURSOR_BRIDGE_RUNTIME_MODE ? "environment" : "default";
-    this.workspaceFile = options.workspaceFile === null ? null : resolve8(options.workspaceFile || resolveWorkspaceBindingFile());
+    this.workspaceFile = options.workspaceFile === null ? null : resolve9(options.workspaceFile || resolveWorkspaceBindingFile());
     this.workspaceKey = options.workspaceKey || resolveWorkspaceBindingKey(process.env, { cwd: this.adapterStartCwd });
     const persistedWorkspace = options.projectPath === void 0 ? readWorkspaceBinding(this.workspaceFile, this.workspaceKey) : null;
-    this.projectPath = options.projectPath !== void 0 ? isSshWorkspaceUri(options.projectPath) ? parseSshWorkspace(options.projectPath).uri : resolve8(String(options.projectPath)) : persistedWorkspace && persistedWorkspace.projectPath || null;
+    this.projectPath = options.projectPath !== void 0 ? isSshWorkspaceUri(options.projectPath) ? parseSshWorkspace(options.projectPath).uri : resolve9(String(options.projectPath)) : persistedWorkspace && persistedWorkspace.projectPath || null;
     this.workspaceSource = options.projectPath !== void 0 ? "constructor" : persistedWorkspace ? "persistent_init" : "auto_detect";
     this.workspaceUpdatedAt = persistedWorkspace && persistedWorkspace.updatedAt || null;
     this.workspaceConfirmationRequired = this.workspaceKey === "default" && options.projectPath === void 0;
     if (isSshWorkspaceUri(this.projectPath)) this.workspaceConfirmationRequired = true;
-    this.modelPreferencesFile = options.modelPreferencesFile === null ? null : resolve8(options.modelPreferencesFile || resolveCursorModelPreferencesFile());
+    this.modelPreferencesFile = options.modelPreferencesFile === null ? null : resolve9(options.modelPreferencesFile || resolveCursorModelPreferencesFile());
     this.modelPreferences = readCursorModelPreferences(this.modelPreferencesFile);
-    this.sessionFile = options.sessionFile === null ? null : resolve8(options.sessionFile || resolveCursorSessionRegistryFile());
+    this.sessionFile = options.sessionFile === null ? null : resolve9(options.sessionFile || resolveCursorSessionRegistryFile());
     this.sessionInstanceId = String(
       options.sessionInstanceId || `cursor-adapter-${createCursorSessionId().slice("cursor-session-".length)}`
     );
@@ -26037,7 +26473,7 @@ var CursorBridge = class {
           if (this.busy || this.activeParallel.size > 0 || this.queue.length > 0) {
             return { ok: false, state: "workspace_registration_busy", error: "Cursor tasks became queued or running before registration" };
           }
-          return JSON.parse(await evalJS(c, exprRegisterAgentsWorkspace(projectPath, statSync3(projectPath).isFile())) || "{}");
+          return JSON.parse(await evalJS(c, exprRegisterAgentsWorkspace(projectPath, statSync4(projectPath).isFile())) || "{}");
         });
         repository = registration;
         if (registration.state === "workspace_registration_requested") {
@@ -26407,8 +26843,8 @@ var CursorBridge = class {
     const id = options.taskId || this._nextTaskId();
     let resolvePromise;
     let rejectPromise;
-    const promise = new Promise((resolve9, reject) => {
-      resolvePromise = resolve9;
+    const promise = new Promise((resolve10, reject) => {
+      resolvePromise = resolve10;
       rejectPromise = reject;
     });
     promise.catch(() => {
@@ -27300,10 +27736,10 @@ var CursorBridge = class {
       }
     } catch (error2) {
       primaryError = error2 instanceof Error ? error2 : new Error(String(error2));
-      let failure3 = primaryError.modelSelectionFailure;
-      if (!failure3) {
+      let failure4 = primaryError.modelSelectionFailure;
+      if (!failure4) {
         const pickerUnavailable = /model picker (?:is unavailable|did not open)/i.test(primaryError.message);
-        failure3 = {
+        failure4 = {
           failureClass: primaryError.pickerRead ? "picker_read_failed" : pickerUnavailable ? "picker_did_not_open" : "probe_error",
           retryable: true
         };
@@ -27319,14 +27755,14 @@ var CursorBridge = class {
         cdp: primaryError.cdp || null,
         requestedModel,
         requestedEffort,
-        failureClass: failure3.failureClass,
-        retryable: failure3.retryable === true,
-        errorCode: primaryError.code || `CURSOR_MODEL_${String(failure3.failureClass).toUpperCase()}`,
-        available: failure3.available || [],
-        attempts: failure3.attempts || [],
-        trigger: failure3.trigger || null,
-        lastPollError: failure3.lastPollError || null,
-        menu: failure3.menu || null,
+        failureClass: failure4.failureClass,
+        retryable: failure4.retryable === true,
+        errorCode: primaryError.code || `CURSOR_MODEL_${String(failure4.failureClass).toUpperCase()}`,
+        available: failure4.available || [],
+        attempts: failure4.attempts || [],
+        trigger: failure4.trigger || null,
+        lastPollError: failure4.lastPollError || null,
+        menu: failure4.menu || null,
         runtimeMode: this.runtimeMode,
         lastError: primaryError.message,
         failedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -29106,6 +29542,42 @@ var WORKSPACE_PATH_SCHEMA = {
 function buildToolDefinitions(bridgeInstance) {
   return [
     {
+      name: "cursor_connection",
+      description: "List, inspect or explicitly save user-level named SSH connections. A name persists the exact remote workspace and its dedicated session across new Codex chats. Get/list do not contact Cursor. Do not ask the user to retype host/path when their saved name resolves. Saving a different target requires replace=true.",
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          action: { type: "string", enum: ["list", "get", "save"] },
+          name: { type: "string", description: "Saved connection name, e.g. project-workspace" },
+          uri: { type: "string", description: "Required only when explicitly saving an SSH target for the first time" },
+          session_id: { type: ["string", "null"], description: "Optional existing read-only Bridge session to keep; it must be present in the shared registry" },
+          replace: { type: "boolean", default: false },
+          expected_revision: { type: "integer", minimum: 1 }
+        },
+        required: ["action"]
+      }
+    },
+    {
+      name: "cursor_connection_send",
+      description: "Send a read-only turn by saved connection name. Automatically reads the stored host/path, revalidates the actual SSH IDE window and continues the saved dedicated Cursor Agent across new Codex chats. No host, path or session ID is required. It creates a first session only if none is saved; new_session=true explicitly creates another Agent. Missing or interrupted sessions never silently fall back to a new chat. Poll and collect with cursor_status using the returned taskId.",
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          name: { type: "string" },
+          prompt: { type: "string" },
+          request_id: { type: "string", minLength: 1, maxLength: 200 },
+          new_session: { type: "boolean", default: false },
+          target_id: { type: "string" },
+          background: { type: "boolean", default: true },
+          timeout_ms: { type: "integer", minimum: 3e4, maximum: 9e5, default: 6e5 },
+          request_context: REQUEST_CONTEXT_SCHEMA
+        },
+        required: ["name", "prompt", "request_id"]
+      }
+    },
+    {
       name: "cursor_ssh_init",
       description: "Bind one already-open classic Cursor IDE SSH folder by exact remote identity. Does not open, close, or switch windows. The first release is single-folder, serial and read-only; use cursor_ssh_session to create a dedicated collaboration chat.",
       inputSchema: {
@@ -29252,6 +29724,7 @@ function buildToolDefinitions(bridgeInstance) {
 }
 var ADAPTER_START_CWD = process.cwd();
 var bridge = new CursorBridge({ adapterStartCwd: ADAPTER_START_CWD });
+var namedConnections = new NamedConnectionController(bridge);
 var server = new Server(
   { name: "cursor-bridge", version: PLUGIN_VERSION },
   { capabilities: { tools: { listChanged: true } } }
@@ -29301,6 +29774,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request2) => {
   const { name, arguments: args } = request2.params;
   try {
+    if (name === "cursor_connection") {
+      const action = args?.action;
+      const result = action === "list" ? namedConnections.list() : action === "get" ? namedConnections.get(args?.name) : action === "save" ? namedConnections.save(
+        {
+          name: args?.name,
+          uri: args?.uri,
+          ...args?.session_id !== void 0 ? { sessionId: args.session_id } : {}
+        },
+        { replace: args?.replace === true, expectedRevision: args?.expected_revision }
+      ) : (() => {
+        throw new Error("action must be list, get or save");
+      })();
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+    if (name === "cursor_connection_send") {
+      const result = await namedConnections.send(args?.name, args?.prompt, {
+        requestId: args?.request_id,
+        newSession: args?.new_session === true,
+        targetId: args?.target_id,
+        background: args?.background !== false,
+        timeoutMs: args?.timeout_ms,
+        requestContext: args?.request_context
+      });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
     if (name === "cursor_ssh_init") {
       if (args?.uri !== void 0 && (args.authority !== void 0 || args.remote_path !== void 0)) throw new Error("Use uri or authority + remote_path, not both");
       const result = await bridge.initializeSshWorkspace(args?.uri ?? { authority: args?.authority, remotePath: args?.remote_path }, { targetId: args?.target_id });

@@ -66,8 +66,9 @@ import { isAgentsWindowTitle } from './cursor-ensure-core.mjs';
 import { defaultLifecycleDir, ensureLifecycleDir } from './lifecycle-paths.mjs';
 import { isSshWorkspaceUri, parseSshWorkspace } from './remote-workspace.mjs';
 import { EXPR_SSH_WINDOW_IDENTITY, inspectSshWindowIdentity } from './ssh-window-identity.mjs';
+import { NamedConnectionController } from './connection-controller.mjs';
 
-const PLUGIN_VERSION = '6.0.9-ssh.1';
+const PLUGIN_VERSION = '6.0.9-ssh.2';
 const CDP_PORT = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 const ORIGIN = `http://localhost:${CDP_PORT}`;
 const QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 300000);
@@ -5728,6 +5729,36 @@ const WORKSPACE_PATH_SCHEMA = {
 function buildToolDefinitions(bridgeInstance) {
   return [
     {
+      name: 'cursor_connection',
+      description: 'List, inspect or explicitly save user-level named SSH connections. A name persists the exact remote workspace and its dedicated session across new Codex chats. Get/list do not contact Cursor. Do not ask the user to retype host/path when their saved name resolves. Saving a different target requires replace=true.',
+      inputSchema: {
+        type: 'object', additionalProperties: false,
+        properties: {
+          action: { type: 'string', enum: ['list', 'get', 'save'] },
+          name: { type: 'string', description: 'Saved connection name, e.g. project-workspace' },
+          uri: { type: 'string', description: 'Required only when explicitly saving an SSH target for the first time' },
+          session_id: { type: ['string', 'null'], description: 'Optional existing read-only Bridge session to keep; it must be present in the shared registry' },
+          replace: { type: 'boolean', default: false },
+          expected_revision: { type: 'integer', minimum: 1 },
+        }, required: ['action'],
+      },
+    },
+    {
+      name: 'cursor_connection_send',
+      description: 'Send a read-only turn by saved connection name. Automatically reads the stored host/path, revalidates the actual SSH IDE window and continues the saved dedicated Cursor Agent across new Codex chats. No host, path or session ID is required. It creates a first session only if none is saved; new_session=true explicitly creates another Agent. Missing or interrupted sessions never silently fall back to a new chat. Poll and collect with cursor_status using the returned taskId.',
+      inputSchema: {
+        type: 'object', additionalProperties: false,
+        properties: {
+          name: { type: 'string' }, prompt: { type: 'string' },
+          request_id: { type: 'string', minLength: 1, maxLength: 200 },
+          new_session: { type: 'boolean', default: false }, target_id: { type: 'string' },
+          background: { type: 'boolean', default: true },
+          timeout_ms: { type: 'integer', minimum: 30000, maximum: 900000, default: 600000 },
+          request_context: REQUEST_CONTEXT_SCHEMA,
+        }, required: ['name', 'prompt', 'request_id'],
+      },
+    },
+    {
       name: 'cursor_ssh_init',
       description: 'Bind one already-open classic Cursor IDE SSH folder by exact remote identity. Does not open, close, or switch windows. The first release is single-folder, serial and read-only; use cursor_ssh_session to create a dedicated collaboration chat.',
       inputSchema: {
@@ -5892,6 +5923,7 @@ function buildToolDefinitions(bridgeInstance) {
 
 const ADAPTER_START_CWD = process.cwd();
 const bridge = new CursorBridge({ adapterStartCwd: ADAPTER_START_CWD });
+const namedConnections = new NamedConnectionController(bridge);
 const server = new Server(
   { name: 'cursor-bridge', version: PLUGIN_VERSION },
   { capabilities: { tools: { listChanged: true } } },
@@ -5948,6 +5980,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   try {
+    if (name === 'cursor_connection') {
+      const action = args?.action;
+      const result = action === 'list' ? namedConnections.list()
+        : action === 'get' ? namedConnections.get(args?.name)
+          : action === 'save' ? namedConnections.save({ name: args?.name, uri: args?.uri,
+            ...(args?.session_id !== undefined ? { sessionId: args.session_id } : {}) },
+          { replace: args?.replace === true, expectedRevision: args?.expected_revision })
+            : (() => { throw new Error('action must be list, get or save'); })();
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
+    if (name === 'cursor_connection_send') {
+      const result = await namedConnections.send(args?.name, args?.prompt, {
+        requestId: args?.request_id, newSession: args?.new_session === true, targetId: args?.target_id,
+        background: args?.background !== false, timeoutMs: args?.timeout_ms, requestContext: args?.request_context });
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
     if (name === 'cursor_ssh_init') {
       if (args?.uri !== undefined && (args.authority !== undefined || args.remote_path !== undefined)) throw new Error('Use uri or authority + remote_path, not both');
       const result = await bridge.initializeSshWorkspace(args?.uri ?? { authority: args?.authority, remotePath: args?.remote_path }, { targetId: args?.target_id });
