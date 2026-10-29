@@ -4,6 +4,18 @@ All notable changes to Cursor Bridge are documented here.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [6.0.9-ssh.6] - 2026-10-29
+
+- Newly created SSH Agents now support authorized read/write tasks by default.
+  `read_only:true` constrains an individual task. Historical read-only session
+  policies are never migrated; use a new Agent for write capability.
+- Preserve caller isolation, cross-process UI coordination, per-session busy
+  protection, exact Agent checks and task result routing. SSH filesystem scope
+  and file-write conflict scheduling are intentionally deferred by user request;
+  local task path rules remain unchanged.
+- Keep additional acceptance targeted to necessary high-risk changes. Ordinary
+  observational tasks do not trigger duplicate SSH scans or computations.
+
 ## [6.0.9-ssh.5] - 2026-10-29
 
 - Named SSH targets now default to caller-isolated Agents. Host MCP thread

@@ -49,7 +49,9 @@ test('remote initialization persists only one verified exact window identity', a
   assert.equal(result.status, 'ssh-window-bound');
   assert.equal(result.targetId, 'ssh-target');
   assert.equal(result.projectPath, uri);
-  assert.equal(result.readOnly, true);
+  assert.equal(result.newAgentsWriteEnabled, true);
+  assert.equal(result.sshScope, 'single-folder-existing-ide-new-agent-read-write');
+  assert.match(result.nextStep, /read\/write-capable/);
   assert.equal(result.remoteConnectionState, 'not-independently-probed');
   assert.equal(readWorkspaceBinding(bridge.workspaceFile, 'default').projectPath, uri);
   assert.equal(bridge.tasks.size, 0);
@@ -72,7 +74,7 @@ test('explicit target_id resolves duplicate windows without using their titles',
   assert.deepEqual(bridge.probes, ['b']);
 });
 
-test('a first SSH turn creates a separate read-only persistent session and retries do not enqueue again', async t => {
+test('a first SSH turn creates a separate write-capable session and retries do not enqueue again', async t => {
   const { bridge } = fixture(t);
   await bridge.initializeSshWorkspace(uri);
   const receipt = await bridge.sshSessionTurn('Read the project entry points', { requestId: 'first-turn' });
@@ -80,14 +82,15 @@ test('a first SSH turn creates a separate read-only persistent session and retri
   assert.equal(bridge.queue.length, 1);
   const job = bridge.queue[0];
   assert.equal(job.newChat, true);
-  assert.equal(job.readOnly, true);
+  assert.equal(job.readOnly, false);
   assert.equal(job.sessionMode, 'create');
   assert.equal(job.execution, 'parallel_agent');
   assert.equal(job.projectPath, uri);
   const saved = readCursorSessionRegistry(bridge.sessionFile).sessions[receipt.sessionId];
   assert.equal(saved.collaborationKind, 'ssh-read-only');
   assert.equal(saved.remoteWorkspace.authority, 'ssh-remote+alpha');
-  assert.equal(saved.scopeEnvelope.readOnly, true);
+  assert.equal(saved.scopeEnvelope.readOnly, false);
+  assert.equal(saved.sshWriteEnabled, true);
   const duplicate = await bridge.sshSessionTurn('Read the project entry points', { requestId: 'first-turn' });
   assert.equal(duplicate.duplicate, true);
   assert.equal(duplicate.sessionId, receipt.sessionId);
@@ -97,10 +100,9 @@ test('a first SSH turn creates a separate read-only persistent session and retri
   assert.equal(bridge.queue.length, 2);
 });
 
-test('SSH entry points reject writes, isolated execution, missing request IDs and wrong workspace assertions', async t => {
+test('SSH entry points reject isolated execution, missing request IDs and wrong workspace assertions', async t => {
   const { bridge } = fixture(t);
   await bridge.initializeSshWorkspace(uri);
-  await assert.rejects(bridge.doTask('write', { sessionMode: 'create', execution: 'parallel_agent', requestId: 'write' }), /SSH_READ_ONLY_REQUIRED/);
   await assert.rejects(bridge.doTask('read', { readOnly: true }), /SSH_SESSION_REQUIRED/);
   await assert.rejects(bridge.sshSessionTurn('read'), /SSH_REQUEST_ID_REQUIRED/);
   await assert.rejects(bridge.sshSessionTurn('read', { requestId: 'wrong', workspacePath: otherHost }), /SSH_WORKSPACE_MISMATCH/);
@@ -233,13 +235,13 @@ test('a repeated request ID never bypasses host identity checks', async t => {
     projectPath: otherHost, readOnly: true, allowedPaths: [], requestId: 'same-id', timeoutMs: 30000 }), /SESSION_WORKSPACE_MISMATCH/);
 });
 
-test('MCP exposes dedicated SSH initialization and session tools without accepting write flags', t => {
+test('MCP exposes per-task SSH read_only mode without introducing file-scope scheduling', t => {
   const { bridge } = fixture(t);
   const tools = new Map(buildToolDefinitions(bridge).map(tool => [tool.name, tool]));
   assert.ok(tools.has('cursor_ssh_init'));
   const session = tools.get('cursor_ssh_session').inputSchema;
   assert.deepEqual(session.required, ['prompt', 'request_id']);
   assert.equal(session.additionalProperties, false);
-  assert.equal(session.properties.read_only, undefined);
+  assert.equal(session.properties.read_only.type, 'boolean');
   assert.equal(session.properties.allowed_paths, undefined);
 });

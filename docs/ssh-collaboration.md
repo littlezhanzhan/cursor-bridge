@@ -1,4 +1,32 @@
-# Experimental SSH collaboration — 6.0.9-ssh.5
+# Experimental SSH collaboration — 6.0.9-ssh.6
+
+## New Agent read/write capability
+
+Starting with `6.0.9-ssh.6`, newly created SSH Agents support user-authorized
+read/write tasks. No historical session is migrated or upgraded. A saved
+historical read-only Agent still defaults to read-only and rejects an explicit
+write request. Use `new_session:true` on a named connection, or omit `session_id`
+on `cursor_ssh_session`, to create a new write-capable Agent.
+
+`read_only:true` makes the current task observational. It does not remove a new
+Agent's ability to perform a later write task. With no flag, a new Agent defaults
+to read/write; a continuation inherits the existing Agent's capability. Session
+metadata exposes `writeEnabled`; task status exposes the current `readOnly`.
+
+As requested for this preview, SSH writing does not require `allowed_paths`,
+and no SSH filesystem scope or file-write conflict scheduling is introduced.
+Agent execution can overlap, while the existing UI lock, exact identity checks,
+single-session busy gate and result routing remain active. Do not describe UI
+coordination as protection from concurrent edits to the same file. Existing
+local-task `allowed_paths` behavior is unchanged.
+
+Only perform writes authorized by the user's task. Necessary acceptance for
+deployment, deletion, permissions and production configuration remains with
+the primary agent. This is not an OS filesystem sandbox or a privilege change.
+
+The internal `ssh-read-only` discovery tag is retained for old-adapter
+compatibility; effective capability comes from the new-session write flag.
+The flag is absent on historical read-only records and is never added to them.
 
 ## Caller isolation and concurrent read-only execution
 
@@ -31,7 +59,8 @@ may submit. A live UI-lock owner is never displaced by age. A dead owner can
 be recovered; an ownerless/incomplete lock fails closed for inspection.
 These locks coordinate Bridge processes on one OS host and local filesystem;
 they do not lock a person's mouse/keyboard or provide filesystem write isolation.
-SSH write tasks remain unsupported. Local parallel writable scopes retain their
+The `6.0.9-ssh.5` release supported only SSH read-only tasks; new Agent write
+capability is described above. Local parallel writable scopes retain their
 existing process-local path-overlap limits; cross-process writable isolation is
 not claimed by this SSH release.
 

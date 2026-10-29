@@ -63,7 +63,7 @@ For an exact known-file or known-symbol lookup, establish the cheapest determini
 - Use `execution=fifo` for one ordinary task, dependent tasks, overlapping write scopes, shared mutable state, or any case where independence is uncertain. Submit the next dependent task only after accepting the previous result.
 - Use `execution=parallel_agent` only for at least two independent, separately verifiable tasks whose write paths do not overlap.
 - Set `read_only=true` for analysis-only work. Independent read-only observations may run concurrently; record relevant timestamps because they are not one atomic snapshot. Serialize tasks when either depends on the other's output or modifies their shared state.
-- Set `read_only=false` only with a non-empty set of workspace-relative `allowed_paths` that contains no globs and cannot escape the workspace. Keep the set as small as practical. It is a scheduling declaration and prompt constraint, not a filesystem sandbox.
+- For local `cursor_do` tasks, set `read_only=false` only with a non-empty set of workspace-relative `allowed_paths` that contains no globs and cannot escape the workspace. SSH tools use the dedicated new-Agent policy below and do not require allowed_paths. These declarations are not an OS filesystem sandbox.
 
 Do not choose parallel execution merely because there are many tasks. When dependency or path relationships are unclear, use `fifo`.
 
@@ -86,14 +86,27 @@ task ID. The global UI lock does not coordinate a person's mouse/keyboard or
 an older Bridge process. Legacy active or uncertain unbound SSH sessions block
 new dispatch until explicitly resolved.
 
+For SSH Agents created with 6.0.9-ssh.6, authorized write tasks are supported and
+are the new-Agent default. For an observational request, pass `read_only=true`.
+That flag restricts the current task, not the new Agent's future capability.
+Historical read-only sessions retain their policy; do not upgrade them. If the
+user requests a write while the saved Agent reports `writeEnabled=false`, create
+a new Agent with `new_session=true` (or omit the old direct session_id).
+SSH write tasks do not require allowed_paths in this preview, and file scope or
+file-write conflict scheduling is deliberately not implemented. Do not claim
+that the UI lock protects concurrent edits to a file. Keep new Agents isolated
+by caller and preserve the single-active-turn gate. Local write-task path rules
+below remain unchanged. High-risk actions still require the necessary targeted
+acceptance; routine read-only work is not independently repeated.
+
 - Keep `session_mode=isolated` as the default. It preserves the existing clean-task behavior.
 - Use `session_mode=create` only when the user explicitly asks to keep later Cursor turns in the same conversation, for example “开启 Cursor 持续会话”, “后续都在同一个 Cursor 会话处理”, or “keep using the same Cursor Agent”.
 - Use `session_mode=continue` only with the exact `session_id` previously returned by Bridge. “继续 Cursor 会话 <session_id>” is explicit. “继续”, “接着做”, “再改一下”, or “发给 Cursor” alone must not select a session.
 - “刚才的 Cursor 会话” may resolve without restating the ID only when the current host task has exactly one ready session for the current workspace. Otherwise report `SESSION_REQUIRED` or `SESSION_AMBIGUOUS`; never guess from the selected, newest, or similarly named Agent.
 - “新开”, “独立”, “干净会话”, or “不要继承上下文” always means isolated/new work and overrides continuity.
-- Start a new session when the workspace, product objective, model/effort, read-only/write boundary, or maximum `allowed_paths` changes. Independent review and final verification also use fresh context.
+- Start a new session when the workspace, product objective, model/effort, or immutable permission envelope changes. For local bounded sessions this includes read-only/write boundaries and maximum allowed_paths. A new write-capable SSH Agent may switch per-task read_only mode without replacing its session; a historical read-only SSH Agent must be preserved and replaced with a new Agent for writing.
 - Persistent sessions require `parallel_agent` and never fall back to FIFO. One session permits only one active turn; different sessions remain subject to the existing path-overlap rules.
-- Every continued turn gets a new `task_id`, repeats `read_only=true` or an `allowed_paths` subset, and may provide a `request_id` so an immediate client retry returns the existing turn instead of sending twice.
+- Every continued turn gets a new `task_id`. Local bounded sessions repeat read_only=true or an allowed_paths subset; SSH tools inherit the saved Agent capability unless a per-task read_only mode is supplied. A fresh request_id lets an immediate retry return the existing turn without sending twice.
 - `session_id` is the stable public association. `agent_id` remains internal evidence and may be promoted from a provisional Cursor identity; never use it as the caller's session key.
 
 ## Dispatch a task

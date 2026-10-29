@@ -49,8 +49,9 @@ export class NamedConnectionController {
     if (!session) throw failure('CONNECTION_SESSION_NOT_FOUND', 'The saved session is absent from this adapter\'s shared session registry; do not silently create a replacement');
     if (parseSshWorkspace(session.projectPath).uri !== connection.uri
         || session.collaborationKind !== 'ssh-read-only'
-        || session.scopeEnvelope?.readOnly !== true || (!session.agentId && !session.activeTaskId)) {
-      throw failure('CONNECTION_SESSION_MISMATCH', 'The saved session must have the same exact SSH workspace, a bound Agent, and a read-only scope');
+        || (session.scopeEnvelope?.readOnly !== true && session.sshWriteEnabled !== true)
+        || (!session.agentId && !session.activeTaskId)) {
+      throw failure('CONNECTION_SESSION_MISMATCH', 'The saved session must have the same exact SSH workspace, a bound Agent and a supported access policy');
     }
     return session;
   }
@@ -113,6 +114,9 @@ export class NamedConnectionController {
     }
     if (previous && !options.newSession && ['closed', 'failed'].includes(previous.state)) {
       throw failure('CONNECTION_SESSION_CLOSED', 'The saved session cannot continue; request new_session=true only when a new Agent is intended');
+    }
+    if (previous && !options.newSession && options.readOnly === false && previous.sshWriteEnabled !== true) {
+      throw failure('SSH_SESSION_READ_ONLY', 'This historical Agent remains read-only. Use new_session=true to create a new write-capable Agent.');
     }
 
     // The user selected the saved name. Revalidate the real window on every adapter.

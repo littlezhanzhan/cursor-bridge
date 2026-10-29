@@ -19,7 +19,7 @@ Provide every task independently:
 | `request_context` | Declare `sender` (`user/model/unknown`) and instruction `source` (`user/model/mixed/unknown`) for this turn. AI callers use sender=model. Label user-confirmed requirements and model additions separately for mixed prompts. Omitted fields remain unknown; these declarations never authorize work. |
 | `execution` | Use only `fifo` or `parallel_agent`. Use `fifo` when safe parallelism cannot be demonstrated. |
 | `read_only` | Use `true` for lookup and analysis; use `false` for any file modification. |
-| `allowed_paths` | Required when `read_only=false`. Provide the smallest workspace-relative path set, with no glob, absolute path, or workspace-escaping `..`. Omit it when `read_only=true`. This is not a filesystem sandbox. |
+| `allowed_paths` | Required for local `cursor_do` writes. SSH tools do not require or enforce file scopes in this preview. For local paths use the smallest workspace-relative set, with no glob, absolute path or escaping `..`. This is not a filesystem sandbox. |
 | `completion_contract` | State the deliverables, validation commands, permitted incomplete items, final report format, and that narrative output should follow the task language. Preserve paths, commands, identifiers, and machine tokens verbatim. |
 | `background` | Default to `true` so the primary agent may continue independent work; it returns a compact submission receipt. Set `false` only to wait synchronously for the full result body. |
 
@@ -28,7 +28,7 @@ Provide every task independently:
 Choose `parallel_agent` only when all conditions hold:
 
 1. Tasks have no data, ordering, or decision dependency.
-2. Normalized `allowed_paths` for write tasks are pairwise non-overlapping.
+2. For local path-scheduled write tasks, normalized `allowed_paths` are pairwise non-overlapping. SSH file conflict scheduling is deferred; do not claim the shared UI lock protects concurrent file edits.
 3. Tasks do not share Unity, browser, database, or other mutable runtime state.
 4. Each result can be accepted independently; one failure does not invalidate the other results.
 
@@ -100,7 +100,7 @@ For an R6-style false negative, continue compact polling of the original `task_i
 
 Cursor's completion statement means only that delegated execution ended; it is not project verification. The primary agent must:
 
-1. Inspect the actual diff against `allowed_paths`.
+1. Inspect the reported changes against the user's task; compare the actual diff to allowed_paths where that local scope exists, and perform additional acceptance only when needed for the risk.
 2. Separate delegated changes from pre-existing workspace changes.
 3. Confirm task identity, completion and actual result receipt for every task. For ordinary read-only queries/statistics, inspect scope, units and reported errors without repeating SSH scans or computations. Independently run targeted acceptance only when necessary for high-risk changes (deployment, deletion, permissions or production configuration), or when the user explicitly requests verification; do not redo the entire task by default.
 4. Decide whether to accept, request rework, continue serially, or record a blocker.
@@ -110,7 +110,7 @@ Cursor's completion statement means only that delegated execution ended; it is n
 
 - If `agent_id` is missing and the task has not been sent, stop expanding the parallel batch and safely fall back to `fifo`. If it may have been sent or is `needs_attention/orphaned`, continue treating its paths as occupied and inspect the Agents Window instead of resubmitting.
 - If a timed-out task changed the workspace, inspect the changes before submitting the same task again.
-- Reject and report any result that modifies files outside `allowed_paths`.
+- Reject and report modifications outside a declared local allowed_paths scope or the user-authorized task. Do not describe SSH tasks as having an enforced filesystem scope.
 - Stop automatic integration when parallel tasks conflict and return the batch to primary-agent review.
 - If Agent History or the response DOM is temporarily unreadable, let Bridge wait and retry against the same `agent_id`. Enter `needs_attention` after persistent failure; do not incorrectly mark the task complete or create a duplicate Agent.
 - For a bound orphan, use `reap` before `cancel`. `cancel` requires the exact `expected_agent_id` and only releases after stable Stop evidence. `abandon` requires explicit confirmation, a reason, acknowledgement that the Agent may still write, and the exact `expected_agent_id` when one is bound.

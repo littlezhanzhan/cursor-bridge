@@ -73,7 +73,7 @@ import { locateNewAgentTarget } from './new-agent-target.mjs';
 import { CallerBridgePool, resolveCallerIdentity } from './caller-identity.mjs';
 import { withInterprocessLock } from './interprocess-lock.mjs';
 
-const PLUGIN_VERSION = '6.0.9-ssh.5';
+const PLUGIN_VERSION = '6.0.9-ssh.6';
 const CDP_PORT = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 const ORIGIN = `http://localhost:${CDP_PORT}`;
 const QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 300000);
@@ -1870,7 +1870,7 @@ class CursorBridge {
       workspaceBinding: this._lastWorkspaceBinding || null,
       ...(isSshWorkspaceUri(resolvedProjectPath) ? {
         workspaceKind: 'ssh', remoteWorkspace: parseSshWorkspace(resolvedProjectPath),
-        sshScope: 'single-folder-existing-ide-read-only',
+        sshScope: 'single-folder-existing-ide-new-agent-read-write',
       } : {}),
     };
   }
@@ -1907,6 +1907,9 @@ class CursorBridge {
       } : null,
       modelPreference: session.modelPreference || null,
       readOnly: session.scopeEnvelope && session.scopeEnvelope.readOnly === true,
+      writeEnabled: isSshWorkspaceUri(session.projectPath)
+        ? session.sshWriteEnabled === true
+        : session.scopeEnvelope?.readOnly === false,
       allowedPaths: session.scopeEnvelope && Array.isArray(session.scopeEnvelope.allowedPaths)
         ? session.scopeEnvelope.allowedPaths
         : [],
@@ -1918,7 +1921,7 @@ class CursorBridge {
     };
   }
 
-  _claimNewSession({ taskId, projectPath, readOnly, allowedPaths, modelPreference, requestId, timeoutMs }) {
+  _claimNewSession({ taskId, projectPath, readOnly, allowedPaths, modelPreference, requestId, timeoutMs, sshWriteEnabled = false }) {
     this._ensureTaskCapacity();
     if (!this.sessionFile) throw cursorSessionError('SESSION_STORAGE_DISABLED', 'persistent session storage is disabled');
     const sessionId = createCursorSessionId();
@@ -1931,10 +1934,13 @@ class CursorBridge {
       callerKey: this.callerKey,
       uiCoordinationVersion: this.uiLockPath ? 1 : 0,
       ...(isSshWorkspaceUri(projectPath) ? { remoteWorkspace: parseSshWorkspace(projectPath), collaborationKind: 'ssh-read-only' } : {}),
+      // Keep the legacy SSH discovery tag so older adapters conservatively block active writers.
+      ...(isSshWorkspaceUri(projectPath) && sshWriteEnabled ? { sshWriteEnabled: true } : {}),
       agentId: null,
       agentLabel: null,
       modelPreference: modelPreference ? { ...modelPreference } : null,
-      scopeEnvelope: { readOnly, allowedPaths: [...allowedPaths] },
+      scopeEnvelope: { readOnly: isSshWorkspaceUri(projectPath) && sshWriteEnabled ? false : readOnly,
+        allowedPaths: [...allowedPaths] },
       turnIndex: 1,
       epoch: 1,
       activeTaskId: taskId,
@@ -1972,7 +1978,8 @@ class CursorBridge {
       if (item.id === ownSessionId || item.collaborationKind !== 'ssh-read-only'
           || !sameSessionProject(item.projectPath, projectPath)
           || !(item.activeTaskId || ['creating', 'busy', 'needs_attention'].includes(item.state))) return false;
-      if (item.uiCoordinationVersion !== 1 || item.scopeEnvelope?.readOnly !== true) return true;
+      if (item.uiCoordinationVersion !== 1
+          || (item.scopeEnvelope?.readOnly !== true && item.sshWriteEnabled !== true)) return true;
       if (item.agentId) return false;
       const pid = item.lease?.adapterPid;
       if (item.state !== 'creating' || !Number.isSafeInteger(pid) || pid <= 0
@@ -2028,7 +2035,9 @@ class CursorBridge {
       }
       if (!session.agentId) throw cursorSessionError('SESSION_AGENT_NOT_BOUND', sessionId);
       const envelope = session.scopeEnvelope || { readOnly: false, allowedPaths: [] };
-      if (envelope.readOnly === true) {
+      if (isSshWorkspaceUri(projectPath) && session.sshWriteEnabled === true) {
+        // New SSH Agents support either task mode. File write-scope scheduling is deliberately deferred.
+      } else if (envelope.readOnly === true) {
         if (readOnly !== true || allowedPaths.length > 0) {
           throw cursorSessionError('SESSION_SCOPE_EXPANSION', 'a read-only session must remain explicitly read-only');
         }
@@ -2477,8 +2486,8 @@ class CursorBridge {
       this.workspaceConfirmationRequired = false;
       this._setSshLifecycle(expected, match);
       return { ...this.workspaceView(), ready: true, status: 'ssh-window-bound',
-        targetId: match.page.id, readOnly: true, remoteConnectionState: 'not-independently-probed',
-        nextStep: 'Use cursor_ssh_session with a new request_id to create a dedicated read-only collaboration chat; reuse its session_id for subsequent turns.' };
+        targetId: match.page.id, newAgentsWriteEnabled: true, remoteConnectionState: 'not-independently-probed',
+        nextStep: 'Use cursor_ssh_session with a new request_id to create a read/write-capable Agent; set read_only=true for an observational turn. Historical read-only Agents remain unchanged.' };
     });
   }
 
@@ -2488,7 +2497,7 @@ class CursorBridge {
       checkedAt: new Date().toISOString() };
     this._lastLifecycle = { ok: true, status: 'already', projectPath: workspace.uri,
       targetId: page.id, workspaceAction: 'attached-ssh-workspace', lifecycleMode: 'ssh-attached',
-      remoteWorkspace: workspace, adapterPid: process.pid, readOnly: true,
+      remoteWorkspace: workspace, adapterPid: process.pid, newAgentsWriteEnabled: true,
       remoteConnectionState: 'not-independently-probed', identitySource: 'cursor-window-configuration' };
   }
 
@@ -2523,8 +2532,12 @@ class CursorBridge {
   async sshSessionTurn(prompt, options = {}) {
     if (!isSshWorkspaceUri(this.projectPath)) throw cursorSessionError('SSH_INITIALIZATION_REQUIRED', 'Run cursor_ssh_init first');
     if (!options.requestId) throw cursorSessionError('SSH_REQUEST_ID_REQUIRED', 'Supply one unique request_id and reuse it only when retrying that same turn');
+    if (options.readOnly !== undefined && typeof options.readOnly !== 'boolean') throw cursorSessionError('SSH_TASK_MODE_INVALID', 'read_only must be boolean');
+    const existing = options.sessionId ? this._readSession(options.sessionId) : null;
+    const readOnly = options.readOnly === undefined
+      ? !!(existing && existing.sshWriteEnabled !== true) : options.readOnly;
     return this.doTask(prompt, { ...options, workspacePath: options.workspacePath || this.projectPath,
-      readOnly: true, readOnlySpecified: true, allowedPaths: [], execution: 'parallel_agent',
+      readOnly, readOnlySpecified: true, allowedPaths: [], execution: 'parallel_agent',
       sessionMode: options.sessionId ? 'continue' : 'create', preferLegacyUi: true });
   }
 
@@ -2848,9 +2861,6 @@ class CursorBridge {
     }
     const readOnly = options.readOnly === true;
     if (isSshWorkspaceUri(this.projectPath)) {
-      if (!readOnly || (options.allowedPaths && options.allowedPaths.length)) {
-        throw cursorSessionError('SSH_READ_ONLY_REQUIRED', 'The first SSH collaboration release only accepts read_only=true without write paths');
-      }
       if (sessionMode === 'isolated' || execution !== 'parallel_agent') {
         throw cursorSessionError('SSH_SESSION_REQUIRED', 'SSH tasks require a dedicated create/continue session');
       }
@@ -2874,10 +2884,10 @@ class CursorBridge {
     if (readOnly && allowedPaths.length > 0) {
       throw new Error('read_only=true cannot be combined with allowed_paths because a read-only task cannot declare a write scope');
     }
-    if (execution === 'parallel_agent' && !readOnly && allowedPaths.length === 0) {
+    if (execution === 'parallel_agent' && !readOnly && allowedPaths.length === 0 && !isSshWorkspaceUri(this.projectPath)) {
       throw new Error('A parallel_agent write task must provide allowed_paths; set read_only=true explicitly for a read-only task');
     }
-    if (execution === 'parallel_agent' && !readOnly) {
+    if (execution === 'parallel_agent' && !readOnly && !isSshWorkspaceUri(this.projectPath)) {
       this._validateParallelAllowedPaths(allowedPaths);
       this._assertNoParallelPathConflict(allowedPaths);
     }
@@ -2913,6 +2923,7 @@ class CursorBridge {
         modelPreference,
         requestId,
         timeoutMs,
+        sshWriteEnabled: isSshWorkspaceUri(projectPath),
       });
       if (session.duplicateRequest) {
         const existing = this.tasks.get(session.activeTaskId || session.lastTask?.taskId || '');
@@ -5876,7 +5887,7 @@ function buildToolDefinitions(bridgeInstance) {
           session_scope: { type: 'string', enum: ['caller', 'shared'], default: 'caller', description: 'caller isolates Agents by Codex thread. shared requires an explicit user request to share the saved Agent.' },
           name: { type: 'string', description: 'Saved connection name, e.g. project-workspace' },
           uri: { type: 'string', description: 'Required only when explicitly saving an SSH target for the first time' },
-          session_id: { type: ['string', 'null'], description: 'Optional existing read-only Bridge session to keep; it must be present in the shared registry' },
+          session_id: { type: ['string', 'null'], description: 'Optional existing Bridge session for the explicit shared default; its saved access policy is preserved' },
           replace: { type: 'boolean', default: false },
           expected_revision: { type: 'integer', minimum: 1 },
         }, required: ['action'],
@@ -5884,11 +5895,12 @@ function buildToolDefinitions(bridgeInstance) {
     },
     {
       name: 'cursor_connection_send',
-      description: 'Send a read-only turn by connection name. Default session_scope=caller creates an independent Agent per Codex thread and continues only that caller\'s Agent. Different callers may run concurrently. shared explicitly reuses the legacy shared session when requested. new_session=true creates another Agent within the selected scope. Poll and collect the exact returned taskId.',
+      description: 'Send a task by connection name. New SSH Agents support read/write; read_only=true restricts this task to observation. Existing read-only Agents keep their historical policy: use new_session=true to create a write-capable Agent. Default session_scope=caller isolates Codex threads. shared is explicit opt-in. UI operations are coordinated; file write-scope and write-conflict scheduling are not enforced. Poll and collect the exact returned taskId.',
       inputSchema: {
         type: 'object', additionalProperties: false,
         properties: {
           name: { type: 'string' }, prompt: { type: 'string' },
+          read_only: { type: 'boolean', description: 'Optional task mode. New Agents default to read/write; omission on a saved historical Agent preserves its existing read-only policy.' },
           session_scope: { type: 'string', enum: ['caller', 'shared'], default: 'caller' },
           request_id: { type: 'string', minLength: 1, maxLength: 200 },
           new_session: { type: 'boolean', default: false }, target_id: { type: 'string' },
@@ -5900,7 +5912,7 @@ function buildToolDefinitions(bridgeInstance) {
     },
     {
       name: 'cursor_ssh_init',
-      description: 'Bind one already-open classic Cursor IDE SSH folder by exact remote identity. Does not open, close, or switch windows. Separate read-only Agents may run concurrently; UI dispatch and collection are coordinated across processes. Use cursor_ssh_session to create a dedicated collaboration chat.',
+      description: 'Bind one already-open classic Cursor IDE SSH folder by exact remote identity. Does not open, close, or switch windows. New Agents support read/write; independent Agents may run concurrently with coordinated UI dispatch/collection. File write-conflict scheduling is not implemented.',
       inputSchema: {
         type: 'object', additionalProperties: false,
         properties: {
@@ -5915,12 +5927,13 @@ function buildToolDefinitions(bridgeInstance) {
     },
     {
       name: 'cursor_ssh_session',
-      description: 'Send a read-only turn to a dedicated SSH collaboration Agent. Omit session_id once to create a separate chat; then reuse the returned Bridge session_id. Supply a unique request_id per turn, reusing it only for retries. Existing user chats are preserved. Collect replies with cursor_status(task_id, detail="result").',
+      description: 'Send a task to a dedicated SSH Agent. Omit session_id to create a new read/write-capable Agent. Set read_only=true for an observational task. On continuation, omission inherits the saved Agent capability; historical read-only Agents cannot be upgraded. New tasks do not migrate old Agent policies. File scopes and write conflicts are not enforced. Collect exact task replies with cursor_status(detail="result").',
       inputSchema: {
         type: 'object', additionalProperties: false,
         properties: {
           prompt: { type: 'string' }, request_id: { type: 'string', minLength: 1, maxLength: 200 },
           session_id: { type: 'string' }, workspace_uri: { type: 'string' },
+          read_only: { type: 'boolean', description: 'Task is read-only when true; false permits the user-authorized write task on a new write-capable Agent.' },
           background: { type: 'boolean', default: true },
           timeout_ms: { type: 'integer', minimum: 30000, maximum: 900000, default: 600000 },
           request_context: REQUEST_CONTEXT_SCHEMA,
@@ -6141,7 +6154,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === 'cursor_connection_send') {
       const result = await namedConnections.send(args?.name, args?.prompt, {
         requestId: args?.request_id, newSession: args?.new_session === true, targetId: args?.target_id, sessionScope: args?.session_scope,
-        background: args?.background !== false, timeoutMs: args?.timeout_ms, requestContext: args?.request_context });
+        background: args?.background !== false, timeoutMs: args?.timeout_ms, requestContext: args?.request_context, readOnly: args?.read_only });
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
     if (name === 'cursor_ssh_init') {
@@ -6152,7 +6165,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === 'cursor_ssh_session') {
       const result = await bridge.sshSessionTurn(args?.prompt, { sessionId: args?.session_id,
         requestId: args?.request_id, workspacePath: args?.workspace_uri,
-        background: args?.background !== false, timeoutMs: args?.timeout_ms, requestContext: args?.request_context });
+        background: args?.background !== false, timeoutMs: args?.timeout_ms, requestContext: args?.request_context, readOnly: args?.read_only });
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
     if (name === 'cursor_init') {

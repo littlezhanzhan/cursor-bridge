@@ -1,4 +1,4 @@
-> SSH 预览版 fork：新增的两个 SSH 工具、独立插件市场和 `6.0.9-ssh.5`
+> SSH 预览版 fork：新增的两个 SSH 工具、独立插件市场和 `6.0.9-ssh.6`
 > 使用方法见 [SSH 协作说明](./docs/ssh-collaboration.md)。下文保留上游本地工作区说明与历史验收记录。
 
 <p align="center">
