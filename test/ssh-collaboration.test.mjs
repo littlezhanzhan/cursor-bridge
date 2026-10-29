@@ -92,7 +92,9 @@ test('a first SSH turn creates a separate read-only persistent session and retri
   assert.equal(duplicate.duplicate, true);
   assert.equal(duplicate.sessionId, receipt.sessionId);
   assert.equal(bridge.queue.length, 1);
-  await assert.rejects(bridge.sshSessionTurn('Another task', { requestId: 'second-turn' }), /SSH_SESSION_BUSY/);
+  const independent = await bridge.sshSessionTurn('Another task', { requestId: 'second-turn' });
+  assert.notEqual(independent.sessionId, receipt.sessionId);
+  assert.equal(bridge.queue.length, 2);
 });
 
 test('SSH entry points reject writes, isolated execution, missing request IDs and wrong workspace assertions', async t => {
@@ -193,7 +195,7 @@ test('two adapters atomically deduplicate the same SSH creation request', async 
   assert.equal(Object.keys(readCursorSessionRegistry(first.sessionFile).sessions).length, 1);
 });
 
-test('two adapters cannot submit different simultaneous requests to one SSH workspace', async t => {
+test('two coordinated adapters may submit separate read-only sessions to one SSH workspace', async t => {
   const { bridge: first, root } = fixture(t);
   const second = new FixtureBridge(root);
   await Promise.all([first.initializeSshWorkspace(uri), second.initializeSshWorkspace(uri)]);
@@ -201,9 +203,26 @@ test('two adapters cannot submit different simultaneous requests to one SSH work
     first.sshSessionTurn('First', { requestId: 'raced-first' }),
     second.sshSessionTurn('Second', { requestId: 'raced-second' }),
   ]);
-  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
-  assert.match(results.find(result => result.status === 'rejected').reason.message, /SSH_WORKSPACE_BUSY/);
-  assert.equal(first.queue.length + second.queue.length, 1);
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 2);
+  assert.notEqual(results[0].value.sessionId, results[1].value.sessionId);
+  assert.notEqual(results[0].value.taskId, results[1].value.taskId);
+  assert.equal(first.queue.length + second.queue.length, 2);
+});
+
+test('legacy active senders and uncertain unbound sessions still block unsafe admission', async t => {
+  for (const state of ['legacy', 'needs_attention']) {
+    const { bridge } = fixture(t);
+    await bridge.initializeSshWorkspace(uri);
+    const receipt = await bridge.sshSessionTurn('First', { requestId: `blocked-${state}` });
+    const { updateCursorSessionRegistry } = await import('../cursor-session-registry.mjs');
+    updateCursorSessionRegistry(bridge.sessionFile, registry => {
+      const session = registry.sessions[receipt.sessionId];
+      if (state === 'legacy') delete session.uiCoordinationVersion;
+      else session.state = 'needs_attention';
+    });
+    await assert.rejects(bridge.sshSessionTurn('Must not send', { requestId: `next-${state}` }), /SSH_WORKSPACE_BUSY/);
+    assert.equal(bridge.queue.length, 1);
+  }
 });
 
 test('a repeated request ID never bypasses host identity checks', async t => {

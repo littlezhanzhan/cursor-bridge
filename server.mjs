@@ -70,8 +70,10 @@ import { NamedConnectionController } from './connection-controller.mjs';
 import { createUnifiedHistoryAdapter } from './unified-history-adapter.mjs';
 import { classifyCursorUiFlavor } from './page-ui-flavor.mjs';
 import { locateNewAgentTarget } from './new-agent-target.mjs';
+import { CallerBridgePool, resolveCallerIdentity } from './caller-identity.mjs';
+import { withInterprocessLock } from './interprocess-lock.mjs';
 
-const PLUGIN_VERSION = '6.0.9-ssh.4';
+const PLUGIN_VERSION = '6.0.9-ssh.5';
 const CDP_PORT = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 const ORIGIN = `http://localhost:${CDP_PORT}`;
 const QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 300000);
@@ -1826,6 +1828,11 @@ class CursorBridge {
     this.sessionInstanceId = String(
       options.sessionInstanceId || `cursor-adapter-${createCursorSessionId().slice('cursor-session-'.length)}`,
     );
+    this.callerIdentity = options.callerIdentity || resolveCallerIdentity({ instanceId: this.sessionInstanceId });
+    this.callerKey = this.callerIdentity.key;
+    this.uiLockPath = options.uiLockPath === null ? null : resolve(options.uiLockPath
+      || process.env.CURSOR_BRIDGE_UI_LOCK_PATH
+      || join(dirname(resolveCursorSessionRegistryFile(null)), `ui-cdp-${CDP_PORT}.lock`));
     this._lastPresentation = null;
     this.busy = false;
     this.queue = [];
@@ -1845,6 +1852,8 @@ class CursorBridge {
     const resolvedProjectPath = this.projectPath || this._lastLifecycle && this._lastLifecycle.projectPath || null;
     return {
       workspaceKey: this.workspaceKey,
+      callerKey: this.callerKey,
+      uiCoordinationVersion: this.uiLockPath ? 1 : 0,
       workspaceIdentitySource: this.workspaceKey === 'default' ? 'unavailable' : this.workspaceKey.split(':')[0],
       workspaceBusy: this._workspacePending > 0,
       workspaceConfirmationRequired: this.workspaceConfirmationRequired,
@@ -1919,6 +1928,8 @@ class CursorBridge {
       state: 'creating',
       projectPath,
       workspaceKey: this.workspaceKey,
+      callerKey: this.callerKey,
+      uiCoordinationVersion: this.uiLockPath ? 1 : 0,
       ...(isSshWorkspaceUri(projectPath) ? { remoteWorkspace: parseSshWorkspace(projectPath), collaborationKind: 'ssh-read-only' } : {}),
       agentId: null,
       agentLabel: null,
@@ -1932,6 +1943,7 @@ class CursorBridge {
       lease: {
         taskId,
         instanceId: this.sessionInstanceId,
+        adapterPid: process.pid,
         epoch: 1,
         expiresAt: new Date(Date.now() + timeoutMs + 60000).toISOString(),
       },
@@ -1944,7 +1956,7 @@ class CursorBridge {
     return updateCursorSessionRegistry(this.sessionFile, (registry) => {
       if (isSshWorkspaceUri(projectPath)) {
         const duplicate = Object.values(registry.sessions).find(item =>
-          item.collaborationKind === 'ssh-read-only' && item.workspaceKey === this.workspaceKey
+          item.collaborationKind === 'ssh-read-only' && item.callerKey === this.callerKey
           && sameSessionProject(item.projectPath, projectPath) && item.lastRequestId === requestId);
         if (duplicate) return { ...duplicate, duplicateRequest: true };
         this._assertSshRegistryIdle(registry, projectPath);
@@ -1956,10 +1968,19 @@ class CursorBridge {
   }
 
   _assertSshRegistryIdle(registry, projectPath, ownSessionId = '') {
-    const blocking = Object.values(registry.sessions).find(item => item.id !== ownSessionId
-      && item.collaborationKind === 'ssh-read-only' && sameSessionProject(item.projectPath, projectPath)
-      && (item.activeTaskId || ['creating', 'busy', 'needs_attention'].includes(item.state)));
-    if (blocking) throw cursorSessionError('SSH_WORKSPACE_BUSY', `SSH workspace is reserved by ${blocking.id}; collect or reconcile that exact session before submitting another`);
+    const blocking = Object.values(registry.sessions).find(item => {
+      if (item.id === ownSessionId || item.collaborationKind !== 'ssh-read-only'
+          || !sameSessionProject(item.projectPath, projectPath)
+          || !(item.activeTaskId || ['creating', 'busy', 'needs_attention'].includes(item.state))) return false;
+      if (item.uiCoordinationVersion !== 1 || item.scopeEnvelope?.readOnly !== true) return true;
+      if (item.agentId) return false;
+      const pid = item.lease?.adapterPid;
+      if (item.state !== 'creating' || !Number.isSafeInteger(pid) || pid <= 0
+          || !(Date.parse(item.lease?.expiresAt) > Date.now())) return true;
+      try { process.kill(pid, 0); return false; }
+      catch (error) { return error.code === 'ESRCH'; }
+    });
+    if (blocking) throw cursorSessionError('SSH_WORKSPACE_BUSY', `SSH workspace has a legacy or uncertain unbound session ${blocking.id}; recover that exact session before submitting another`);
   }
 
   _claimExistingSession({ sessionId, taskId, projectPath, readOnly, allowedPaths, requestId, timeoutMs }) {
@@ -2029,6 +2050,7 @@ class CursorBridge {
       session.lease = {
         taskId,
         instanceId: this.sessionInstanceId,
+        adapterPid: process.pid,
         epoch,
         expiresAt: new Date(nowMs + timeoutMs + 60000).toISOString(),
       };
@@ -2341,6 +2363,12 @@ class CursorBridge {
     return { ...result, workspaceBusy: this._workspacePending > 0 };
   }
 
+  async _saveWorkspaceBinding(projectPath) {
+    if (!this.workspaceFile) return writeWorkspaceBinding(this.workspaceFile, this.workspaceKey, projectPath);
+    return withInterprocessLock(`${this.workspaceFile}.write.lock`,
+      () => writeWorkspaceBinding(this.workspaceFile, this.workspaceKey, projectPath));
+  }
+
   async _listSshPages() {
     return (await httpJson('/json/list')).filter(page => page.type === 'page' && page.webSocketDebuggerUrl);
   }
@@ -2436,11 +2464,13 @@ class CursorBridge {
   async initializeSshWorkspace(workspace, { targetId = '' } = {}) {
     const expected = parseSshWorkspace(workspace);
     return this._withWorkspaceAdmission(async () => {
-      if (this.busy || this.queue.length || this.activeParallel.size) {
+      if ((this.busy || this.queue.length || this.activeParallel.size)
+          && (!sameSessionProject(this.projectPath, expected.uri)
+            || (targetId && targetId !== this._lastLifecycle?.targetId))) {
         throw cursorSessionError('SSH_WORKSPACE_BUSY', 'Finish or recover the current task before changing the SSH workspace');
       }
       const match = await this._findSshWorkspace(expected, String(targetId || ''));
-      const saved = writeWorkspaceBinding(this.workspaceFile, this.workspaceKey, expected.uri);
+      const saved = await this._saveWorkspaceBinding(expected.uri);
       this.projectPath = saved.projectPath;
       this.workspaceSource = 'persistent_init';
       this.workspaceUpdatedAt = saved.updatedAt;
@@ -2505,7 +2535,7 @@ class CursorBridge {
       throw new Error('cursor_init cannot change workspace while Cursor tasks are queued or running');
     }
     const previousProjectPath = this.projectPath || this._lastLifecycle && this._lastLifecycle.projectPath || null;
-    const saved = writeWorkspaceBinding(this.workspaceFile, this.workspaceKey, projectPath);
+    const saved = await this._saveWorkspaceBinding(projectPath);
     this.workspaceConfirmationRequired = false;
     this.projectPath = saved.projectPath;
     this.workspaceSource = 'persistent_init';
@@ -2827,17 +2857,12 @@ class CursorBridge {
       if (!requestId) throw cursorSessionError('SSH_REQUEST_ID_REQUIRED', 'SSH tasks require a stable request_id');
       if (sessionMode === 'create' && this.sessionFile) {
         const session = Object.values(readCursorSessionRegistry(this.sessionFile).sessions).find(item =>
-          item.collaborationKind === 'ssh-read-only' && item.workspaceKey === this.workspaceKey
+          item.collaborationKind === 'ssh-read-only' && item.callerKey === this.callerKey
           && sameSessionProject(item.projectPath, this.projectPath) && item.lastRequestId === requestId);
         if (session) {
           const existing = this.tasks.get(session.activeTaskId || session.lastTask?.taskId || '');
           return { duplicate: true, response: { duplicate: true, ...(existing ? this._compactTaskView(existing) : this._sessionView(session)) } };
         }
-      }
-      const repeatedContinuation = sessionMode === 'continue' && this.sessionFile
-        && this._readSession(sessionId)?.lastRequestId === requestId;
-      if (!repeatedContinuation && (this.busy || this.queue.length || this.activeParallel.size)) {
-        throw cursorSessionError('SSH_SESSION_BUSY', 'SSH collaboration is serial; collect or recover the active turn before submitting another');
       }
     }
     const requestedTimeoutMs = Number(options.timeoutMs ?? 600000);
@@ -2968,7 +2993,7 @@ class CursorBridge {
   }
 
   _nextTaskId() {
-    return `cursor-${Date.now().toString(36)}-${this.nextTaskId++}`;
+    return `cursor-task-${createCursorSessionId().slice('cursor-session-'.length)}`;
   }
 
   _enqueue(kind, prompt, options) {
@@ -3135,7 +3160,8 @@ class CursorBridge {
   }
 
   _withUiLock(fn) {
-    const run = this._uiTail.then(fn, fn);
+    const execute = () => this.uiLockPath ? withInterprocessLock(this.uiLockPath, fn) : fn();
+    const run = this._uiTail.then(execute, execute);
     this._uiTail = run.catch(() => {});
     return run;
   }
@@ -3260,10 +3286,30 @@ class CursorBridge {
         try {
           if (job.effectiveExecution === 'parallel_agent') {
             job.phase = 'submitting';
-            const submitted = await this._withUiLock(() =>
-              job.sessionMode === 'continue'
-                ? this._submitSessionTurn(job)
-                : this._submitParallelAgent(job));
+            const submitted = await this._withUiLock(async () => {
+              if (isSshWorkspaceUri(job.projectPath) && this.sessionFile) {
+                this._assertSshRegistryIdle(readCursorSessionRegistry(this.sessionFile), job.projectPath, job.sessionId);
+              }
+              try {
+                const result = await (job.sessionMode === 'continue'
+                  ? this._submitSessionTurn(job)
+                  : this._submitParallelAgent(job));
+                if (!result.fallbackReason) {
+                  job.agentId = result.agent.id;
+                  job.agentLabel = result.agent.label || null;
+                  this._bindSessionAgent(job);
+                }
+                return result;
+              } catch (error) {
+                if (error && error.confirmedNotSent !== true
+                    && (job.sendState === 'sent' || job.sendState === 'dispatching' || job.sentAt)) {
+                  error.sent = true;
+                  if (!job.agentId) this._safeSettleSessionJob(job, 'needs_attention', { needsAttention: true,
+                    attention: 'Submission may have happened without a confirmed Agent identity; recover this exact session before other dispatch.' });
+                }
+                throw error;
+              }
+            });
             if (submitted.fallbackReason) {
               if (job.sessionMode !== 'isolated') {
                 throw cursorSessionError(
@@ -3283,14 +3329,6 @@ class CursorBridge {
               const result = await this._withUiLock(() => this._run(job.prompt, job));
               this._finishJob(job, result);
             } else {
-              job.agentId = submitted.agent.id;
-              job.agentLabel = submitted.agent.label || null;
-              try {
-                this._bindSessionAgent(job);
-              } catch (error) {
-                if (job.sendState === 'sent' || job.sentAt) error.sent = true;
-                throw error;
-              }
               job.sentAt = job.sentAt || new Date().toISOString();
               job.phase = 'running';
               job.reservationScope = job.readOnly ? 'agent' : 'paths';
@@ -3325,6 +3363,8 @@ class CursorBridge {
             this._finishJob(job, result);
           }
         } catch (error) {
+          if (error && error.confirmedNotSent !== true
+              && (job.sendState === 'sent' || job.sendState === 'dispatching' || job.sentAt)) error.sent = true;
           if ((error && error.cancelled) || job.cancelRequested) {
             if (error && error.stopConfirmed) {
         this._cancelJob(job, job.cancelReason || error.message || 'Task cancelled', {
@@ -3338,6 +3378,8 @@ class CursorBridge {
           } else if (error && error.confirmedTerminal) {
             this.activeParallel.delete(job.id);
             this._failJob(job, error);
+          } else if (error && error.sent && /^LOCK_/.test(String(error.code || ''))) {
+            this._orphanParallelJob(job, error);
           } else if (error && error.sent) {
             job.firstWaitError ||= error.message;
       job.error = `Submission state is uncertain; monitoring continues by agentId: ${error.message}`;
@@ -5585,6 +5627,8 @@ class CursorBridge {
     const models = this.modelPreferencesView();
     return {
       pluginVersion: PLUGIN_VERSION,
+      callerIdentity: this.callerIdentity,
+      uiCoordination: this.uiLockPath ? 'cross-process' : 'process-only',
       statusPath: 'json-list',
       workspaceKey: workspace.workspaceKey,
       workspaceIdentitySource: workspace.workspaceIdentitySource,
@@ -5824,11 +5868,12 @@ function buildToolDefinitions(bridgeInstance) {
   return [
     {
       name: 'cursor_connection',
-      description: 'List, inspect or explicitly save user-level named SSH connections. A name persists the exact remote workspace and its dedicated session across new Codex chats. Get/list do not contact Cursor. Do not ask the user to retype host/path when their saved name resolves. Saving a different target requires replace=true.',
+      description: 'List, inspect or save named SSH targets. By default each Codex caller has its own dedicated Agent. session_scope=shared explicitly opts into the legacy shared Agent. Get/list do not contact Cursor. Saving a different target requires replace=true.',
       inputSchema: {
         type: 'object', additionalProperties: false,
         properties: {
           action: { type: 'string', enum: ['list', 'get', 'save'] },
+          session_scope: { type: 'string', enum: ['caller', 'shared'], default: 'caller', description: 'caller isolates Agents by Codex thread. shared requires an explicit user request to share the saved Agent.' },
           name: { type: 'string', description: 'Saved connection name, e.g. project-workspace' },
           uri: { type: 'string', description: 'Required only when explicitly saving an SSH target for the first time' },
           session_id: { type: ['string', 'null'], description: 'Optional existing read-only Bridge session to keep; it must be present in the shared registry' },
@@ -5839,11 +5884,12 @@ function buildToolDefinitions(bridgeInstance) {
     },
     {
       name: 'cursor_connection_send',
-      description: 'Send a read-only turn by saved connection name. Automatically reads the stored host/path, revalidates the actual SSH IDE window and continues the saved dedicated Cursor Agent across new Codex chats. No host, path or session ID is required. It creates a first session only if none is saved; new_session=true explicitly creates another Agent. Missing or interrupted sessions never silently fall back to a new chat. Poll and collect with cursor_status using the returned taskId.',
+      description: 'Send a read-only turn by connection name. Default session_scope=caller creates an independent Agent per Codex thread and continues only that caller\'s Agent. Different callers may run concurrently. shared explicitly reuses the legacy shared session when requested. new_session=true creates another Agent within the selected scope. Poll and collect the exact returned taskId.',
       inputSchema: {
         type: 'object', additionalProperties: false,
         properties: {
           name: { type: 'string' }, prompt: { type: 'string' },
+          session_scope: { type: 'string', enum: ['caller', 'shared'], default: 'caller' },
           request_id: { type: 'string', minLength: 1, maxLength: 200 },
           new_session: { type: 'boolean', default: false }, target_id: { type: 'string' },
           background: { type: 'boolean', default: true },
@@ -5854,7 +5900,7 @@ function buildToolDefinitions(bridgeInstance) {
     },
     {
       name: 'cursor_ssh_init',
-      description: 'Bind one already-open classic Cursor IDE SSH folder by exact remote identity. Does not open, close, or switch windows. The first release is single-folder, serial and read-only; use cursor_ssh_session to create a dedicated collaboration chat.',
+      description: 'Bind one already-open classic Cursor IDE SSH folder by exact remote identity. Does not open, close, or switch windows. Separate read-only Agents may run concurrently; UI dispatch and collection are coordinated across processes. Use cursor_ssh_session to create a dedicated collaboration chat.',
       inputSchema: {
         type: 'object', additionalProperties: false,
         properties: {
@@ -6018,6 +6064,10 @@ function buildToolDefinitions(bridgeInstance) {
 const ADAPTER_START_CWD = process.cwd();
 const bridge = new CursorBridge({ adapterStartCwd: ADAPTER_START_CWD });
 const namedConnections = new NamedConnectionController(bridge);
+const callerBridges = new CallerBridgePool(bridge, identity => new CursorBridge({
+  adapterStartCwd: ADAPTER_START_CWD, callerIdentity: identity, workspaceKey: identity.key,
+}));
+const callerConnections = new WeakMap([[bridge, namedConnections]]);
 const server = new Server(
   { name: 'cursor-bridge', version: PLUGIN_VERSION },
   { capabilities: { tools: { listChanged: true } } },
@@ -6075,10 +6125,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   try {
+    const bridge = callerBridges.forRequest(request);
+    if (!callerConnections.has(bridge)) callerConnections.set(bridge, new NamedConnectionController(bridge));
+    const namedConnections = callerConnections.get(bridge);
     if (name === 'cursor_connection') {
       const action = args?.action;
-      const result = action === 'list' ? namedConnections.list()
-        : action === 'get' ? namedConnections.get(args?.name)
+      const result = action === 'list' ? namedConnections.list({ sessionScope: args?.session_scope })
+        : action === 'get' ? namedConnections.get(args?.name, { sessionScope: args?.session_scope })
           : action === 'save' ? namedConnections.save({ name: args?.name, uri: args?.uri,
             ...(args?.session_id !== undefined ? { sessionId: args.session_id } : {}) },
           { replace: args?.replace === true, expectedRevision: args?.expected_revision })
@@ -6087,7 +6140,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     if (name === 'cursor_connection_send') {
       const result = await namedConnections.send(args?.name, args?.prompt, {
-        requestId: args?.request_id, newSession: args?.new_session === true, targetId: args?.target_id,
+        requestId: args?.request_id, newSession: args?.new_session === true, targetId: args?.target_id, sessionScope: args?.session_scope,
         background: args?.background !== false, timeoutMs: args?.timeout_ms, requestContext: args?.request_context });
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
@@ -6328,4 +6381,5 @@ export {
   releaseAdapterWorkingDirectory,
   lifecycleFailureSummary,
   PLUGIN_VERSION,
+  main as startMcpServer,
 };

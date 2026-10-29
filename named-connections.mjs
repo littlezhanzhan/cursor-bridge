@@ -208,7 +208,7 @@ function acquireConnectionLock(filePath, options = {}) {
       closeSync(handle);
       return () => rmSync(lockPath, { force: true });
     } catch (error) {
-      if (!error || error.code !== 'EEXIST') {
+      if (!error || !['EEXIST', 'EPERM', 'EACCES'].includes(error.code)) {
         throw namedConnectionsError(
           'NAMED_CONNECTIONS_LOCK_FAILED',
           error instanceof Error ? error.message : String(error),

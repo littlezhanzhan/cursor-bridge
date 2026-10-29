@@ -62,12 +62,29 @@ For an exact known-file or known-symbol lookup, establish the cheapest determini
 
 - Use `execution=fifo` for one ordinary task, dependent tasks, overlapping write scopes, shared mutable state, or any case where independence is uncertain. Submit the next dependent task only after accepting the previous result.
 - Use `execution=parallel_agent` only for at least two independent, separately verifiable tasks whose write paths do not overlap.
-- Set `read_only=true` for analysis-only work. Do not run read-only tasks in parallel against the same mutable external state.
+- Set `read_only=true` for analysis-only work. Independent read-only observations may run concurrently; record relevant timestamps because they are not one atomic snapshot. Serialize tasks when either depends on the other's output or modifies their shared state.
 - Set `read_only=false` only with a non-empty set of workspace-relative `allowed_paths` that contains no globs and cannot escape the workspace. Keep the set as small as practical. It is a scheduling declaration and prompt constraint, not a filesystem sandbox.
 
 Do not choose parallel execution merely because there are many tasks. When dependency or path relationships are unclear, use `fifo`.
 
 ## Choose isolated or continuous delivery
+
+For named SSH connections, `cursor_connection_send` defaults to
+`session_scope="caller"`: a new Codex chat gets its own Agent for that connection,
+and subsequent turns in that chat reuse only its own mapping. The server uses
+the host MCP `threadId` metadata or `CODEX_THREAD_ID`; without either it isolates
+by adapter instance and does not promise continuity across adapter restarts.
+Never select `session_scope="shared"` unless the user explicitly asks to share
+the legacy saved Agent. An explicit `session_id` may also continue the exact
+user-requested session. `new_session=true` creates another Agent in the selected
+scope; it does not replace another caller's Agent.
+
+Independent SSH read-only sessions may execute concurrently. Bridge serializes
+UI creation, input, selection and reply extraction across local processes;
+Agent execution runs outside that critical section. Poll and collect each exact
+task ID. The global UI lock does not coordinate a person's mouse/keyboard or
+an older Bridge process. Legacy active or uncertain unbound SSH sessions block
+new dispatch until explicitly resolved.
 
 - Keep `session_mode=isolated` as the default. It preserves the existing clean-task behavior.
 - Use `session_mode=create` only when the user explicitly asks to keep later Cursor turns in the same conversation, for example “开启 Cursor 持续会话”, “后续都在同一个 Cursor 会话处理”, or “keep using the same Cursor Agent”.
@@ -96,7 +113,7 @@ The envelope may contain a small number of local implementation `open_questions`
 3. After a terminal state, call `cursor_status(task_id, detail="result")`. It returns the raw complete retained reply without a JSON wrapper and records explicit receipt; check `isError` before treating content as a reply. Repeat result reads remain allowed while the task is retained. Use `detail="full"` when the diagnostic task detail is needed.
 4. Compare Cursor's claimed work with the real diff, `allowed_paths`, and acceptance contract.
 5. When `cursor_status` reports a configured model default, confirm `modelSelection.applied=true` and preserve its configured/effective model and effort fields in any failure report.
-6. Run risk-proportionate verification in the primary agent. Cursor's response alone cannot support a formal pass, verified state, or governance transition.
+6. For ordinary read-only queries and statistics, confirm the exact task completed, collect its real reply, and check the reported scope/units/errors; do not independently repeat the query, SSH scan or computation by default. Reserve additional independent acceptance for necessary high-risk changes such as deployment, deletion, permissions, production configuration or explicitly requested verification. Keep those checks targeted rather than redoing the whole task. Cursor's response alone cannot support a formal pass or governance transition.
 7. Record each task as complete, partial, failed, timed out, or ambiguous before summarizing the batch.
 
 Report the accepted result in the language of the user's current task. Keep `task_id`, `agent_id`, tool names, states, enum values, paths, commands, hashes, exact permission options, and error/status codes verbatim. If Cursor returned an artifact or report in another language, preserve it and summarize the relevant facts in the current task language.

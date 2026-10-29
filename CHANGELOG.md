@@ -4,6 +4,27 @@ All notable changes to Cursor Bridge are documented here.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [6.0.9-ssh.5] - 2026-10-29
+
+- Named SSH targets now default to caller-isolated Agents. Host MCP thread
+  metadata or CODEX_THREAD_ID identifies each Codex chat; missing identities use
+  an isolated adapter instance. Legacy shared sessions remain available only
+  through explicit shared scope or an exact session handoff.
+- Independent read-only SSH sessions may run concurrently. A cross-process UI
+  mutex serializes dispatch, selection and collection; UUID task IDs and caller
+  task maps keep responses distinct. Caller and workspace bindings use separate
+  atomic records, and same-session requests retain busy/epoch protections.
+- Recheck uncertain unbound senders after acquiring the UI lock, fence uncertain
+  submissions before release, and preserve already-submitted receipts if lock
+  cleanup fails. Active older adapters remain protected by SSH admission.
+- Real acceptance observed two background Agents running simultaneously in one
+  existing SSH IDE window and collected the correct different file results;
+  original history IDs and the legacy shared connection were retained. Local
+  multi-process fixtures also cover reply isolation, process death and retries.
+- Routine read-only queries require completion/result checks without duplicate
+  SSH scans; additional acceptance is reserved for necessary high-risk changes
+  or explicit user verification requests. SSH writes remain unsupported.
+
 ## [6.0.9-ssh.4] - 2026-10-28
 
 - Distinguish SSH CDP enumeration, stale pinned targets, unreadable identity,

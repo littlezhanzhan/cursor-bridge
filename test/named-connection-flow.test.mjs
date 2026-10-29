@@ -48,14 +48,14 @@ function readySession(bridge, workspace = uri) {
   return session.id;
 }
 
-test('a new Codex thread restores the named workspace and exact old Agent using only the name', async t => {
+test('explicit shared scope restores the named workspace and old Agent across Codex threads', async t => {
   const { root, bridge, file, controller } = fixture(t);
   const sessionId = readySession(bridge);
   controller.save({ name: 'project', uri, sessionId });
   const fresh = new FixtureBridge(root, 'entirely-new-chat');
   assert.equal(fresh.projectPath, null);
   const restored = new NamedConnectionController(fresh, { file });
-  const receipt = await restored.send('project', 'Continue the prior task', { requestId: 'new-chat-turn' });
+  const receipt = await restored.send('project', 'Continue the prior task', { sessionScope: 'shared', requestId: 'new-chat-turn' });
   assert.deepEqual(fresh.initCalls, [uri]);
   assert.equal(receipt.sessionReused, true);
   assert.equal(receipt.sessionId, sessionId);
@@ -69,10 +69,10 @@ test('a new Codex thread restores the named workspace and exact old Agent using 
 test('a first named turn saves its new session and retries do not create another Agent', async t => {
   const { bridge, file, controller } = fixture(t);
   controller.save({ name: 'project', uri });
-  const first = await controller.send('project', 'Read only', { requestId: 'first-turn' });
+  const first = await controller.send('project', 'Read only', { sessionScope: 'shared', requestId: 'first-turn' });
   assert.equal(first.sessionReused, false);
   assert.equal(getNamedConnection(file, 'project').sessionId, first.sessionId);
-  const retry = await controller.send('project', 'Read only', { requestId: 'first-turn' });
+  const retry = await controller.send('project', 'Read only', { sessionScope: 'shared', requestId: 'first-turn' });
   assert.equal(retry.duplicate, true);
   assert.equal(retry.sessionId, first.sessionId);
   assert.equal(bridge.queue.length, 1);
@@ -83,7 +83,7 @@ test('new_session=true explicitly creates a different dedicated Agent mapping', 
   const { bridge, controller, file } = fixture(t);
   const oldSession = readySession(bridge);
   controller.save({ name: 'project', uri, sessionId: oldSession });
-  const receipt = await controller.send('project', 'New read-only chat', { requestId: 'new-agent', newSession: true });
+  const receipt = await controller.send('project', 'New read-only chat', { sessionScope: 'shared', requestId: 'new-agent', newSession: true });
   assert.notEqual(receipt.sessionId, oldSession);
   assert.equal(receipt.sessionReused, false);
   assert.equal(bridge.queue[0].newChat, true);
@@ -95,7 +95,7 @@ test('missing names and invalid saved sessions fail before touching the Cursor w
   await assert.rejects(controller.send('missing', 'Read', { requestId: 'a' }), /CONNECTION_NOT_FOUND/);
   saveNamedConnection(file, { name: 'missing-session', uri,
     sessionId: 'cursor-session-11111111-1111-4111-8111-111111111111' });
-  await assert.rejects(controller.send('missing-session', 'Read', { requestId: 'b' }), /CONNECTION_SESSION_NOT_FOUND/);
+  await assert.rejects(controller.send('missing-session', 'Read', { sessionScope: 'shared', requestId: 'b' }), /CONNECTION_SESSION_NOT_FOUND/);
   const wrong = readySession(bridge, otherUri);
   assert.throws(() => controller.save({ name: 'wrong-host', uri, sessionId: wrong }), /CONNECTION_SESSION_MISMATCH/);
   assert.equal(bridge.initCalls.length, 0);
@@ -127,7 +127,7 @@ test('a mapping changed during submission is not overwritten and returns the alr
 test('get and list expose stored metadata without initializing or sending', t => {
   const { bridge, controller } = fixture(t);
   controller.save({ name: 'project', uri });
-  assert.equal(controller.get('project').defaultBehavior, 'create-first-session');
+  assert.equal(controller.get('project').defaultBehavior, 'create-first-caller-session');
   assert.equal(controller.list().connections.length, 1);
   assert.equal(bridge.initCalls.length, 0);
   assert.equal(bridge.queue.length, 0);

@@ -110,7 +110,7 @@ function acquireRegistryLock(filePath, options = {}) {
       closeSync(handle);
       return () => rmSync(lockPath, { force: true });
     } catch (error) {
-      if (!error || error.code !== 'EEXIST') {
+      if (!error || !['EEXIST', 'EPERM', 'EACCES'].includes(error.code)) {
         throw sessionRegistryError('SESSION_REGISTRY_LOCK_FAILED', error instanceof Error ? error.message : String(error), error);
       }
       try {

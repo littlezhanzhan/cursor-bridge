@@ -102,7 +102,7 @@ Cursor's completion statement means only that delegated execution ended; it is n
 
 1. Inspect the actual diff against `allowed_paths`.
 2. Separate delegated changes from pre-existing workspace changes.
-3. Independently run appropriate compile checks, static checks, tests, or journey validation.
+3. Confirm task identity, completion and actual result receipt for every task. For ordinary read-only queries/statistics, inspect scope, units and reported errors without repeating SSH scans or computations. Independently run targeted acceptance only when necessary for high-risk changes (deployment, deletion, permissions or production configuration), or when the user explicitly requests verification; do not redo the entire task by default.
 4. Decide whether to accept, request rework, continue serially, or record a blocker.
 5. Retain formal verification, governance state, and product decision authority.
 

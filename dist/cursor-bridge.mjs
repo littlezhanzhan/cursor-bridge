@@ -2990,7 +2990,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve10.call(this, root, ref);
+      let _sch = resolve11.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a3 = root.localRefs) === null || _a3 === void 0 ? void 0 : _a3[ref];
         const { schemaId } = this.opts;
@@ -3017,7 +3017,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve10(root, ref) {
+    function resolve11(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3881,7 +3881,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve10(baseURI, relativeURI, options) {
+    function resolve11(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const {
         parsed: baseParsed,
@@ -4272,7 +4272,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve: resolve10,
+      resolve: resolve11,
       resolveComponent,
       equal,
       serialize,
@@ -9500,7 +9500,7 @@ var require_websocket = __commonJS({
     var http3 = __require("http");
     var net2 = __require("net");
     var tls = __require("tls");
-    var { randomBytes, createHash: createHash4 } = __require("crypto");
+    var { randomBytes, createHash: createHash5 } = __require("crypto");
     var { Duplex, Readable } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -10181,7 +10181,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash4("sha1").update(key + GUID).digest("base64");
+        const digest = createHash5("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -10550,7 +10550,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http3 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash4 } = __require("crypto");
+    var { createHash: createHash5 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -10857,7 +10857,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash4("sha1").update(key + GUID).digest("base64");
+        const digest = createHash5("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -11906,18 +11906,18 @@ function findCursorExe(options = {}) {
   return findCursorExeDetails(options)?.path || null;
 }
 function cdpUp(timeoutMs = 1500) {
-  return new Promise((resolve10) => {
+  return new Promise((resolve11) => {
     const req = http.get({ host: CDP_HOST, port: CDP_PORT, path: "/json/version" }, (res) => {
       res.resume();
-      resolve10(res.statusCode === 200);
+      resolve11(res.statusCode === 200);
     });
-    req.on("error", () => resolve10(false));
+    req.on("error", () => resolve11(false));
     req.setTimeout(timeoutMs, () => {
       try {
         req.destroy();
       } catch {
       }
-      resolve10(false);
+      resolve11(false);
     });
   });
 }
@@ -11927,25 +11927,25 @@ function cdpListIsCursor(payload) {
   return CURSOR_CDP_PATH.test(d);
 }
 function cdpIsCursor(timeoutMs = 1500) {
-  return new Promise((resolve10) => {
+  return new Promise((resolve11) => {
     const req = http.get({ host: CDP_HOST, port: CDP_PORT, path: "/json/list" }, (res) => {
       let d = "";
       res.on("data", (c) => d += c);
       res.on("end", () => {
         try {
-          resolve10(cdpListIsCursor(d));
+          resolve11(cdpListIsCursor(d));
         } catch {
-          resolve10(false);
+          resolve11(false);
         }
       });
     });
-    req.on("error", () => resolve10(false));
+    req.on("error", () => resolve11(false));
     req.setTimeout(timeoutMs, () => {
       try {
         req.destroy();
       } catch {
       }
-      resolve10(false);
+      resolve11(false);
     });
   });
 }
@@ -12656,20 +12656,20 @@ var init_win_job_breakaway = __esm({
 
 // cursor-lifecycle-client.mjs
 import net from "node:net";
-import { createHash as createHash3 } from "node:crypto";
+import { createHash as createHash4 } from "node:crypto";
 import {
   existsSync as existsSync4,
-  mkdirSync as mkdirSync8,
+  mkdirSync as mkdirSync9,
   readFileSync as readFileSync7,
   realpathSync,
-  readdirSync,
+  readdirSync as readdirSync2,
   renameSync as renameSync7,
   rmSync as rmSync7,
-  unlinkSync,
+  unlinkSync as unlinkSync2,
   writeFileSync as writeFileSync7
 } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { basename as basename6, dirname as dirname7, join as join9, resolve as resolve8, win32 as win32Path } from "node:path";
+import { basename as basename6, dirname as dirname9, join as join11, resolve as resolve9, win32 as win32Path } from "node:path";
 function resolveSupervisorSpawnCwd({
   requestedCwd = null,
   runtimeRoot = null,
@@ -12684,9 +12684,9 @@ function resolveSupervisorSpawnCwd({
   return runtimeRoot;
 }
 function resolvePluginLocalLifecycleDir(sourceScript) {
-  const scriptDir = dirname7(resolve8(sourceScript));
-  const pluginRoot = basename6(scriptDir).toLowerCase() === "dist" ? dirname7(scriptDir) : scriptDir;
-  return join9(pluginRoot, ".cursor-bridge-lifecycle");
+  const scriptDir = dirname9(resolve9(sourceScript));
+  const pluginRoot = basename6(scriptDir).toLowerCase() === "dist" ? dirname9(scriptDir) : scriptDir;
+  return join11(pluginRoot, ".cursor-bridge-lifecycle");
 }
 function inspectWindowsAppContainerPath(target, options = {}) {
   const platform = options.platform || process.platform;
@@ -12729,23 +12729,23 @@ function sleep(ms) {
 }
 function resolveSupervisorScript() {
   if (process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT && existsSync4(process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT)) {
-    return resolve8(process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT);
+    return resolve9(process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT);
   }
-  const here = dirname7(fileURLToPath(import.meta.url));
+  const here = dirname9(fileURLToPath(import.meta.url));
   const candidates = [];
   if (typeof process.argv[1] === "string") {
-    const entryDir = dirname7(resolve8(process.argv[1]));
-    candidates.push(join9(entryDir, "dist", "cursor-lifecycle-supervisor.mjs"));
-    candidates.push(join9(entryDir, "cursor-lifecycle-supervisor.mjs"));
+    const entryDir = dirname9(resolve9(process.argv[1]));
+    candidates.push(join11(entryDir, "dist", "cursor-lifecycle-supervisor.mjs"));
+    candidates.push(join11(entryDir, "cursor-lifecycle-supervisor.mjs"));
   }
   candidates.push(
-    join9(here, "dist", "cursor-lifecycle-supervisor.mjs"),
-    join9(here, "cursor-lifecycle-supervisor.mjs")
+    join11(here, "dist", "cursor-lifecycle-supervisor.mjs"),
+    join11(here, "cursor-lifecycle-supervisor.mjs")
   );
   for (const c of candidates) {
     if (existsSync4(c)) return c;
   }
-  return join9(here, "cursor-lifecycle-supervisor.mjs");
+  return join11(here, "cursor-lifecycle-supervisor.mjs");
 }
 function writeRuntimeFile(target, content) {
   if (existsSync4(target) && readFileSync7(target).equals(content)) return;
@@ -12769,22 +12769,22 @@ function writeRuntimeFile(target, content) {
 function materializeLifecycleSupervisorRuntime({ sourceScript, dir = defaultLifecycleDir() } = {}) {
   const described = describeLifecycleSupervisorRuntime({ sourceScript, dir });
   const { sourceScript: source, content, fingerprint } = described;
-  const runtimeRoot = join9(ensureLifecycleDir(dir), "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
-  mkdirSync8(runtimeRoot, { recursive: true });
-  const script = join9(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
+  const runtimeRoot = join11(ensureLifecycleDir(dir), "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
+  mkdirSync9(runtimeRoot, { recursive: true });
+  const script = join11(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
   writeRuntimeFile(script, content);
   return { sourceScript: source, script, runtimeRoot, fingerprint };
 }
 function describeLifecycleSupervisorRuntime({ sourceScript, dir = defaultLifecycleDir() } = {}) {
-  const source = resolve8(sourceScript || resolveSupervisorScript());
+  const source = resolve9(sourceScript || resolveSupervisorScript());
   if (!existsSync4(source)) throw new Error(`lifecycle supervisor script missing: ${source}`);
   const content = readFileSync7(source);
-  const fingerprint = createHash3("sha256").update(content).digest("hex");
-  const runtimeRoot = join9(dir, "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
-  const script = join9(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
+  const fingerprint = createHash4("sha256").update(content).digest("hex");
+  const runtimeRoot = join11(dir, "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
+  const script = join11(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
   return { sourceScript: source, script, runtimeRoot, fingerprint, content };
 }
-function isProcessAlive(pid) {
+function isProcessAlive2(pid) {
   if (!pid || !Number.isFinite(pid)) return false;
   try {
     process.kill(pid, 0);
@@ -12905,12 +12905,12 @@ function filesystemFallbackDetails(error2) {
 }
 function tryUnlink(path) {
   try {
-    if (path && existsSync4(path)) unlinkSync(path);
+    if (path && existsSync4(path)) unlinkSync2(path);
   } catch {
   }
 }
 function writeBootEnv(dir, extra = {}) {
-  const bootPath = join9(dir, `boot-env-${process.pid}-${Date.now()}.json`);
+  const bootPath = join11(dir, `boot-env-${process.pid}-${Date.now()}.json`);
   const payload = { ...extra };
   for (const [key, value] of Object.entries(process.env)) {
     if (key.startsWith("CURSOR_BRIDGE_") || key === "CURSOR_PROJECT_PATH" || key === "CURSOR_EXE") {
@@ -12956,9 +12956,9 @@ async function ensureSupervisorConnected(options = {}) {
     let targetRuntime = null;
     try {
       targetRuntime = options.persistSupervisorRuntime === false ? {
-        sourceScript: resolve8(sourceScript),
-        script: resolve8(sourceScript),
-        runtimeRoot: dirname7(resolve8(sourceScript)),
+        sourceScript: resolve9(sourceScript),
+        script: resolve9(sourceScript),
+        runtimeRoot: dirname9(resolve9(sourceScript)),
         fingerprint: null
       } : describeLifecycleSupervisorRuntime({ sourceScript, dir });
     } catch {
@@ -13042,9 +13042,9 @@ async function ensureSupervisorConnected(options = {}) {
   try {
     ensureLifecycleDir(dir);
     runtime = options.persistSupervisorRuntime === false ? {
-      sourceScript: resolve8(sourceScript),
-      script: resolve8(sourceScript),
-      runtimeRoot: dirname7(resolve8(sourceScript)),
+      sourceScript: resolve9(sourceScript),
+      script: resolve9(sourceScript),
+      runtimeRoot: dirname9(resolve9(sourceScript)),
       fingerprint: null
     } : (options.materializeRuntimeImpl || materializeLifecycleSupervisorRuntime)({ sourceScript, dir });
   } catch (error2) {
@@ -13063,7 +13063,7 @@ async function ensureSupervisorConnected(options = {}) {
     });
   }
   const stalePid = readPidFile(pidPath);
-  if (stalePid && !isProcessAlive(stalePid)) {
+  if (stalePid && !isProcessAlive2(stalePid)) {
     tryUnlink(pidPath);
     tryUnlink(lockPath);
     if (process.platform !== "win32") {
@@ -13144,7 +13144,7 @@ async function ensureSupervisorConnected(options = {}) {
       }
       await sleep(100);
     }
-    if (canProbeFallback && !isProcessAlive(spawned.pid)) {
+    if (canProbeFallback && !isProcessAlive2(spawned.pid)) {
       return connectPluginLocalFallback({
         sharedFailure: {
           errorKind: "supervisor-start-failed",
@@ -16711,7 +16711,7 @@ var recursive = /* @__PURE__ */ new WeakMap();
 var NONE = 0;
 var ASSUMED = 1;
 var PROVEN = 2;
-function isRecursive(inst, stack, resolve10) {
+function isRecursive(inst, stack, resolve11) {
   const cached2 = recursive.get(inst);
   if (cached2 !== void 0)
     return cached2 ? PROVEN : NONE;
@@ -16721,7 +16721,7 @@ function isRecursive(inst, stack, resolve10) {
   let result = NONE;
   const check = (child) => {
     if (result !== PROVEN && child?._zod) {
-      const answer = isRecursive(child, stack, resolve10);
+      const answer = isRecursive(child, stack, resolve11);
       if (answer > result)
         result = answer;
     }
@@ -16732,7 +16732,7 @@ function isRecursive(inst, stack, resolve10) {
       const desc = Object.getOwnPropertyDescriptor(sh, key);
       if (spread && !desc.enumerable)
         continue;
-      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve10) : NONE;
+      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve11) : NONE;
       if (child > answer)
         answer = child;
     }
@@ -16796,7 +16796,7 @@ function isRecursive(inst, stack, resolve10) {
       break;
     // `$ZodLazy` caches its inner on the def, so a resolved edge is followed exactly
     case "lazy": {
-      const inner = def._cachedInner ?? (resolve10 ? inst._zod.innerType : void 0);
+      const inner = def._cachedInner ?? (resolve11 ? inst._zod.innerType : void 0);
       merge2(inner ? isRecursive(inner, stack, false) : ASSUMED);
       break;
     }
@@ -21898,7 +21898,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve10) => setTimeout(resolve10, pollInterval));
+        await new Promise((resolve11) => setTimeout(resolve11, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -21915,7 +21915,7 @@ var Protocol = class {
    */
   request(request2, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve10, reject) => {
+    return new Promise((resolve11, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -21993,7 +21993,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve10(parseResult.data);
+            resolve11(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -22255,12 +22255,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve10, reject) => {
+    return new Promise((resolve11, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve10, interval);
+      const timeoutId = setTimeout(resolve11, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -23136,19 +23136,19 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve10) => {
+    return new Promise((resolve11) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve10();
+        resolve11();
       } else {
-        this._stdout.once("drain", resolve10);
+        this._stdout.once("drain", resolve11);
       }
     });
   }
 };
 
 // server.mjs
-import { basename as basename7, dirname as dirname8, join as join10, resolve as resolve9 } from "node:path";
+import { basename as basename7, dirname as dirname10, join as join12, resolve as resolve10 } from "node:path";
 import { statSync as statSync4 } from "node:fs";
 
 // node_modules/ws/wrapper.mjs
@@ -23211,8 +23211,8 @@ function makeClient(wsUrl, options = {}) {
   let readyResolve;
   let readyReject;
   const pending = /* @__PURE__ */ new Map();
-  const ready = new Promise((resolve10, reject) => {
-    readyResolve = resolve10;
+  const ready = new Promise((resolve11, reject) => {
+    readyResolve = resolve11;
     readyReject = reject;
   });
   void ready.catch(() => {
@@ -23363,7 +23363,7 @@ function makeClient(wsUrl, options = {}) {
         elapsedMs: 0
       }));
     }
-    return new Promise((resolve10, reject) => {
+    return new Promise((resolve11, reject) => {
       const startedAt = Date.now();
       const timer = setTimeout(() => {
         if (!pending.delete(id)) return;
@@ -23374,7 +23374,7 @@ function makeClient(wsUrl, options = {}) {
           elapsedMs: Date.now() - startedAt
         }));
       }, timeoutMs);
-      pending.set(id, { method, resolve: resolve10, reject, timer, startedAt });
+      pending.set(id, { method, resolve: resolve11, reject, timer, startedAt });
       try {
         ws.send(payload, (cause) => {
           if (!cause || !pending.has(id)) return;
@@ -23643,7 +23643,7 @@ function acquireRegistryLock(filePath, options = {}) {
       closeSync(handle);
       return () => rmSync4(lockPath, { force: true });
     } catch (error2) {
-      if (!error2 || error2.code !== "EEXIST") {
+      if (!error2 || !["EEXIST", "EPERM", "EACCES"].includes(error2.code)) {
         throw sessionRegistryError("SESSION_REGISTRY_LOCK_FAILED", error2 instanceof Error ? error2.message : String(error2), error2);
       }
       try {
@@ -23831,6 +23831,10 @@ function inspectSshWindowIdentity(raw, expectedWorkspace) {
 
 // connection-controller.mjs
 init_remote_workspace();
+import { dirname as dirname8, join as join10 } from "node:path";
+
+// caller-connections.mjs
+import { createHash as createHash3 } from "node:crypto";
 
 // named-connections.mjs
 init_remote_workspace();
@@ -24024,7 +24028,7 @@ function acquireConnectionLock(filePath, options = {}) {
       closeSync2(handle);
       return () => rmSync6(lockPath, { force: true });
     } catch (error2) {
-      if (!error2 || error2.code !== "EEXIST") {
+      if (!error2 || !["EEXIST", "EPERM", "EACCES"].includes(error2.code)) {
         throw namedConnectionsError(
           "NAMED_CONNECTIONS_LOCK_FAILED",
           error2 instanceof Error ? error2.message : String(error2),
@@ -24159,6 +24163,321 @@ function setNamedConnectionSession(filePath, nameValue, sessionIdValue, { expect
   }, lockOptions);
 }
 
+// caller-connections.mjs
+init_remote_workspace();
+var CALLER_CONNECTION_DOMAIN = "cursor-bridge-caller-connection-v1";
+var PROTOTYPE_NAMES2 = /* @__PURE__ */ new Set(["constructor", "prototype"]);
+var SESSION_ID_PATTERN2 = /^cursor-session-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+function callerConnectionsError(code, message, cause) {
+  const error2 = new Error(`${code}: ${message}`);
+  error2.code = code;
+  if (cause) error2.cause = cause;
+  return error2;
+}
+function canonicalConnectionName(value) {
+  if (typeof value !== "string") {
+    throw callerConnectionsError("NAMED_CONNECTION_NAME_INVALID", "name must be a string");
+  }
+  const name = value.trim().toLowerCase();
+  if (name.length > 64 || !/^[a-z0-9][a-z0-9._-]*$/.test(name) || PROTOTYPE_NAMES2.has(name)) {
+    throw callerConnectionsError(
+      "NAMED_CONNECTION_NAME_INVALID",
+      "name must be 1-64 ASCII letters/digits/dot/underscore/dash, start with a letter or digit, and not be a prototype key"
+    );
+  }
+  return name;
+}
+function canonicalConnectionUri(value) {
+  if (!isSshWorkspaceUri(value)) {
+    throw callerConnectionsError("NAMED_CONNECTION_URI_INVALID", "uri must be a vscode-remote SSH workspace URI");
+  }
+  try {
+    return parseSshWorkspace(value).uri;
+  } catch (error2) {
+    throw callerConnectionsError("NAMED_CONNECTION_URI_INVALID", error2.message, error2);
+  }
+}
+function canonicalSessionId2(value) {
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw callerConnectionsError("NAMED_CONNECTION_SESSION_ID_INVALID", "sessionId must be null or a cursor-session UUID");
+  }
+  const match = value.match(SESSION_ID_PATTERN2);
+  if (!match) {
+    throw callerConnectionsError("NAMED_CONNECTION_SESSION_ID_INVALID", "sessionId must use the cursor-session-UUID format");
+  }
+  return `cursor-session-${match[1].toLowerCase()}`;
+}
+function canonicalCallerKey(value) {
+  if (typeof value !== "string" || value.trim().length === 0 || value.includes("\0")) {
+    throw callerConnectionsError("CALLER_CONNECTION_CALLER_KEY_INVALID", "callerKey must be a non-empty string");
+  }
+  return value;
+}
+function canonicalConnection(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw callerConnectionsError("CALLER_CONNECTION_INVALID", "connection must contain name and uri");
+  }
+  return {
+    name: canonicalConnectionName(value.name),
+    uri: canonicalConnectionUri(value.uri)
+  };
+}
+function canonicalExpectedRevision(value) {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw callerConnectionsError("NAMED_CONNECTION_REVISION_INVALID", "expectedRevision must be a safe integer of at least 0");
+  }
+  return value;
+}
+function presentCallerRecord(record2, connection) {
+  if (!record2) return null;
+  if (record2.uri !== connection.uri) {
+    throw callerConnectionsError(
+      "CALLER_CONNECTION_URI_MISMATCH",
+      "stored caller mapping does not match the requested canonical SSH workspace"
+    );
+  }
+  return { ...record2, name: connection.name, uri: connection.uri };
+}
+function callerConnectionKey(callerKey, connectionName, uri) {
+  const caller = canonicalCallerKey(callerKey);
+  const name = canonicalConnectionName(connectionName);
+  const canonicalUri2 = canonicalConnectionUri(uri);
+  const tuple = JSON.stringify([CALLER_CONNECTION_DOMAIN, caller, name, canonicalUri2]);
+  return createHash3("sha256").update(tuple, "utf8").digest("hex");
+}
+function getCallerConnection(filePath, callerKey, connectionValue) {
+  const caller = canonicalCallerKey(callerKey);
+  const connection = canonicalConnection(connectionValue);
+  const storageName = callerConnectionKey(caller, connection.name, connection.uri);
+  const record2 = getNamedConnection(filePath, storageName);
+  return presentCallerRecord(record2, connection);
+}
+function setCallerConnectionSession(filePath, callerKey, connectionValue, sessionId, { expectedRevision, ...lockOptions } = {}) {
+  const caller = canonicalCallerKey(callerKey);
+  const connection = canonicalConnection(connectionValue);
+  const storageName = callerConnectionKey(caller, connection.name, connection.uri);
+  const revision = canonicalExpectedRevision(expectedRevision);
+  const canonicalSession = canonicalSessionId2(sessionId);
+  const record2 = revision === 0 ? saveNamedConnection(filePath, {
+    name: storageName,
+    uri: connection.uri,
+    sessionId: canonicalSession
+  }, { expectedRevision: 0, ...lockOptions }) : setNamedConnectionSession(filePath, storageName, canonicalSession, {
+    expectedRevision: revision,
+    uri: connection.uri,
+    ...lockOptions
+  });
+  return presentCallerRecord(record2, connection);
+}
+
+// interprocess-lock.mjs
+import { randomUUID as randomUUID3 } from "node:crypto";
+import {
+  closeSync as closeSync3,
+  mkdirSync as mkdirSync8,
+  openSync as openSync3,
+  readdirSync,
+  rmdirSync,
+  unlinkSync,
+  lstatSync
+} from "node:fs";
+import { dirname as dirname7, join as join9, resolve as resolve8 } from "node:path";
+var OWNER_FILE_PATTERN = /^([1-9][0-9]*)-([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.owner$/i;
+function lockError(code, message, lockPath, ownerPid = null, cause = null) {
+  const owner = ownerPid === null ? "" : `, ownerPid=${ownerPid}`;
+  const error2 = new Error(`${code}: ${message} (lockPath=${lockPath}${owner})`, cause ? { cause } : void 0);
+  error2.code = code;
+  error2.lockPath = lockPath;
+  if (ownerPid !== null) error2.ownerPid = ownerPid;
+  return error2;
+}
+function validateOptions(lockPath, fn, options) {
+  if (typeof lockPath !== "string" || !lockPath.trim()) {
+    throw lockError("LOCK_PATH_REQUIRED", "lockPath must be a non-empty directory path", String(lockPath || ""));
+  }
+  if (typeof fn !== "function") {
+    throw lockError("LOCK_CALLBACK_REQUIRED", "fn must be a function", resolve8(lockPath));
+  }
+  const waitMs = Number(options.waitMs ?? 12e4);
+  const pollMs = Number(options.pollMs ?? 40);
+  if (!Number.isFinite(waitMs) || waitMs < 0 || !Number.isFinite(pollMs) || pollMs <= 0) {
+    throw lockError("LOCK_OPTIONS_INVALID", "waitMs must be non-negative and pollMs must be positive", resolve8(lockPath));
+  }
+  return { lockPath: resolve8(lockPath), waitMs, pollMs };
+}
+function inspectLockDirectory(lockPath) {
+  let directoryStat;
+  try {
+    directoryStat = lstatSync(lockPath);
+  } catch (error2) {
+    if (error2 && error2.code === "ENOENT") return { state: "absent" };
+    throw lockError("LOCK_INCOMPLETE", "cannot inspect the lock path", lockPath, null, error2);
+  }
+  if (!directoryStat.isDirectory()) {
+    throw lockError("LOCK_INCOMPLETE", "the lock path exists but is not a directory", lockPath);
+  }
+  let entries;
+  try {
+    entries = readdirSync(lockPath, { withFileTypes: true });
+  } catch (error2) {
+    if (error2 && error2.code === "ENOENT") return { state: "absent" };
+    throw lockError("LOCK_INCOMPLETE", "cannot read the lock directory", lockPath, null, error2);
+  }
+  if (entries.length === 0) return { state: "incomplete", reason: "the lock directory has no owner file yet" };
+  if (entries.length !== 1) {
+    throw lockError("LOCK_INCOMPLETE", "the lock directory contains unexpected or multiple files", lockPath);
+  }
+  const [entry] = entries;
+  const match = OWNER_FILE_PATTERN.exec(entry.name);
+  const ownerPid = match ? Number(match[1]) : null;
+  if (!match || !Number.isSafeInteger(ownerPid) || !entry.isFile()) {
+    throw lockError("LOCK_INCOMPLETE", "the lock directory does not contain one valid owner file", lockPath, ownerPid);
+  }
+  let ownerStat;
+  try {
+    ownerStat = lstatSync(join9(lockPath, entry.name));
+  } catch (error2) {
+    if (error2 && error2.code === "ENOENT") return { state: "absent" };
+    throw lockError("LOCK_INCOMPLETE", "cannot inspect the owner file", lockPath, ownerPid, error2);
+  }
+  if (!ownerStat.isFile() || ownerStat.size !== 0) {
+    throw lockError("LOCK_INCOMPLETE", "the owner file is not an empty regular file", lockPath, ownerPid);
+  }
+  return { state: "owner", ownerPid, ownerPath: join9(lockPath, entry.name) };
+}
+function isProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error2) {
+    return !(error2 && error2.code === "ESRCH");
+  }
+}
+function createOwnerFile(lockPath) {
+  const ownerPath = join9(lockPath, `${process.pid}-${randomUUID3()}.owner`);
+  let descriptor2;
+  try {
+    descriptor2 = openSync3(ownerPath, "wx", 384);
+  } catch (error2) {
+    throw lockError("LOCK_INCOMPLETE", "failed to create the unique owner file", lockPath, process.pid, error2);
+  }
+  try {
+    closeSync3(descriptor2);
+  } catch (error2) {
+    let removed = false;
+    try {
+      unlinkSync(ownerPath);
+      removed = true;
+    } catch {
+    }
+    if (removed) {
+      try {
+        rmdirSync(lockPath);
+      } catch {
+      }
+    }
+    throw lockError("LOCK_INCOMPLETE", "failed to close the unique owner file", lockPath, process.pid, error2);
+  }
+  return { lockPath, ownerPath, ownerPid: process.pid };
+}
+function cleanupOwner(owner) {
+  let removed = false;
+  try {
+    unlinkSync(owner.ownerPath);
+    removed = true;
+  } catch (error2) {
+    throw lockError("LOCK_RELEASE_FAILED", "could not unlink this lock owner file", owner.lockPath, owner.ownerPid, error2);
+  }
+  if (!removed) return;
+  try {
+    rmdirSync(owner.lockPath);
+  } catch (error2) {
+    if (error2 && error2.code === "ENOENT") return;
+    throw lockError("LOCK_RELEASE_FAILED", "could not remove the now-empty lock directory", owner.lockPath, owner.ownerPid, error2);
+  }
+}
+function tryReapDeadOwner(lockPath, owner) {
+  let removed = false;
+  try {
+    unlinkSync(owner.ownerPath);
+    removed = true;
+  } catch (error2) {
+    if (error2 && error2.code === "ENOENT") return false;
+    throw lockError("LOCK_INCOMPLETE", "could not unlink the observed dead owner file", lockPath, owner.ownerPid, error2);
+  }
+  if (!removed) return false;
+  try {
+    rmdirSync(lockPath);
+  } catch (error2) {
+    if (error2 && (error2.code === "ENOENT" || error2.code === "ENOTEMPTY" || error2.code === "EEXIST")) return true;
+    throw lockError("LOCK_INCOMPLETE", "could not remove the empty stale lock directory", lockPath, owner.ownerPid, error2);
+  }
+  return true;
+}
+function delay(ms) {
+  return new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
+}
+async function acquireLock(lockPath, waitMs, pollMs) {
+  const deadline = Date.now() + waitMs;
+  try {
+    mkdirSync8(dirname7(lockPath), { recursive: true });
+  } catch (error2) {
+    throw lockError("LOCK_ACQUIRE_FAILED", "could not create the parent directory", lockPath, null, error2);
+  }
+  for (; ; ) {
+    try {
+      mkdirSync8(lockPath);
+      return createOwnerFile(lockPath);
+    } catch (error2) {
+      if (!(error2 && error2.code === "EEXIST")) {
+        if (error2 && error2.code === "LOCK_INCOMPLETE") throw error2;
+        throw lockError("LOCK_ACQUIRE_FAILED", "could not create the lock directory", lockPath, null, error2);
+      }
+    }
+    const observed = inspectLockDirectory(lockPath);
+    if (observed.state === "absent") continue;
+    if (observed.state === "owner" && !isProcessAlive(observed.ownerPid)) {
+      tryReapDeadOwner(lockPath, observed);
+      continue;
+    }
+    if (Date.now() >= deadline) {
+      if (observed.state === "incomplete") {
+        throw lockError("LOCK_INCOMPLETE", observed.reason, lockPath);
+      }
+      throw lockError("UI_LOCK_BUSY", "another live process owns the UI lock", lockPath, observed.ownerPid);
+    }
+    await delay(Math.min(pollMs, Math.max(1, deadline - Date.now())));
+  }
+}
+async function withInterprocessLock(lockPath, fn, options = {}) {
+  const validated = validateOptions(lockPath, fn, options);
+  const owner = await acquireLock(validated.lockPath, validated.waitMs, validated.pollMs);
+  let result;
+  let operationError = null;
+  try {
+    result = await fn();
+  } catch (error2) {
+    operationError = error2;
+  }
+  let releaseError = null;
+  try {
+    cleanupOwner(owner);
+  } catch (error2) {
+    releaseError = error2;
+  }
+  if (operationError && releaseError) {
+    const combined = new AggregateError([operationError, releaseError], "The locked operation failed and its lock could not be fully released", { cause: operationError });
+    combined.code = "LOCK_RELEASE_FAILED";
+    combined.lockPath = validated.lockPath;
+    combined.ownerPid = owner.ownerPid;
+    throw combined;
+  }
+  if (releaseError) throw releaseError;
+  if (operationError) throw operationError;
+  return result;
+}
+
 // connection-controller.mjs
 function failure3(code, message) {
   const error2 = new Error(`${code}: ${message}`);
@@ -24169,9 +24488,21 @@ var NamedConnectionController = class {
   constructor(bridge2, options = {}) {
     this.bridge = bridge2;
     this.file = options.file || resolveNamedConnectionsFile();
+    this.callerFile = options.callerFile || process.env.CURSOR_BRIDGE_CALLER_CONNECTIONS_FILE || join10(dirname8(this.file), "caller-connections-v1.json");
   }
-  list() {
-    return { connections: listNamedConnections(this.file), defaultBehavior: "continue-saved-session" };
+  _scope(value = "caller") {
+    if (!["caller", "shared"].includes(value)) throw failure3("CONNECTION_SESSION_SCOPE_INVALID", "session_scope must be caller or shared");
+    return value;
+  }
+  _binding(connection, scope) {
+    return scope === "shared" ? connection : getCallerConnection(this.callerFile, this.bridge.callerKey, connection);
+  }
+  list(options = {}) {
+    const scope = this._scope(options.sessionScope);
+    return {
+      connections: listNamedConnections(this.file).map((c) => this.get(c.name, { sessionScope: scope })),
+      defaultBehavior: scope === "caller" ? "caller-isolated" : "explicit-shared-session"
+    };
   }
   _require(name) {
     const connection = getNamedConnection(this.file, name);
@@ -24187,15 +24518,23 @@ var NamedConnectionController = class {
     }
     return session;
   }
-  get(name) {
+  get(name, options = {}) {
     const connection = this._require(name);
-    const session = connection.sessionId ? this.bridge._readSession(connection.sessionId) : null;
+    const scope = this._scope(options.sessionScope);
+    const binding = this._binding(connection, scope);
+    const sessionId = binding?.sessionId || null;
+    const session = sessionId ? this.bridge._readSession(sessionId) : null;
     return {
       ...connection,
+      sessionId,
+      ...scope === "shared" ? { sharedSessionId: connection.sessionId } : {},
+      sessionScope: scope,
+      callerIdentity: this.bridge.callerIdentity,
+      callerBindingRevision: scope === "caller" ? binding?.revision || 0 : null,
       workspace: parseSshWorkspace(connection.uri),
-      defaultBehavior: connection.sessionId ? "continue" : "create-first-session",
+      defaultBehavior: sessionId ? `continue-${scope}-session` : `create-first-${scope}-session`,
       session: session ? this.bridge._sessionView(session) : null,
-      sessionAvailable: !connection.sessionId || !!session
+      sessionAvailable: !sessionId || !!session
     };
   }
   save(input, options = {}) {
@@ -24204,14 +24543,38 @@ var NamedConnectionController = class {
     return saveNamedConnection(this.file, { ...input, uri }, options);
   }
   async send(name, prompt, options = {}) {
+    const selected = this._require(name);
+    const sessionScope = this._scope(options.sessionScope);
+    const lockKey = callerConnectionKey(sessionScope === "shared" ? "explicit-shared" : this.bridge.callerKey, selected.name, selected.uri);
+    let receipt;
+    try {
+      return await withInterprocessLock(
+        join10(dirname8(this.callerFile), "connection-dispatch", `${lockKey}.lock`),
+        async () => receipt = await this._send(name, prompt, { ...options, sessionScope }, selected.uri)
+      );
+    } catch (error2) {
+      if (!receipt?.taskId) throw error2;
+      return {
+        ...receipt,
+        warningCode: "CONNECTION_DISPATCH_LOCK_RELEASE_FAILED",
+        warning: `${error2.message}; the task was already submitted. Collect its exact taskId and do not resend automatically.`
+      };
+    }
+  }
+  async _send(name, prompt, options, selectedUri) {
     const connection = this._require(name);
+    if (connection.uri !== selectedUri) throw failure3("CONNECTION_MAPPING_CHANGED", "The named target changed while waiting; no prompt was submitted");
+    const binding = this._binding(connection, options.sessionScope);
+    const scopedSessionId = binding?.sessionId || null;
+    const routing = { sessionScope: options.sessionScope, callerIdentity: this.bridge.callerIdentity };
     const requestId = typeof options.requestId === "string" ? options.requestId.trim() : "";
     if (!requestId || requestId.length > 200) throw failure3("CONNECTION_REQUEST_ID_REQUIRED", "Supply one unique request_id of at most 200 characters for each turn");
-    const previous = connection.sessionId ? this._session(connection) : null;
+    const previous = scopedSessionId ? this._session(connection, scopedSessionId) : null;
     if (previous?.lastRequestId === requestId) {
       const taskId = previous.activeTaskId || previous.lastTask?.taskId || null;
       const task = taskId && this.bridge.tasks.get(taskId);
       return {
+        ...routing,
         duplicate: true,
         connectionName: connection.name,
         sessionReused: true,
@@ -24228,7 +24591,7 @@ var NamedConnectionController = class {
       throw failure3("CONNECTION_SESSION_CLOSED", "The saved session cannot continue; request new_session=true only when a new Agent is intended");
     }
     await this.bridge.initializeSshWorkspace(connection.uri, { targetId: options.targetId || "" });
-    const sessionId = options.newSession ? void 0 : connection.sessionId || void 0;
+    const sessionId = options.newSession ? void 0 : scopedSessionId || void 0;
     const receipt = await this.bridge.sshSessionTurn(prompt, {
       ...options,
       sessionId,
@@ -24238,14 +24601,22 @@ var NamedConnectionController = class {
     if (!receipt.sessionId) throw failure3("CONNECTION_SESSION_UNBOUND", "No durable Bridge session was returned; inspect the original task before retrying");
     let saved;
     try {
-      saved = setNamedConnectionSession(
+      if (this._require(connection.name).uri !== connection.uri) throw failure3("CONNECTION_MAPPING_CHANGED", "The named target changed during submission");
+      saved = options.sessionScope === "shared" ? setNamedConnectionSession(
         this.file,
         connection.name,
         receipt.sessionId,
         { expectedRevision: connection.revision, uri: connection.uri }
+      ) : setCallerConnectionSession(
+        this.callerFile,
+        this.bridge.callerKey,
+        connection,
+        receipt.sessionId,
+        { expectedRevision: binding?.revision || 0 }
       );
     } catch (error2) {
       return {
+        ...routing,
         ...receipt,
         connectionName: connection.name,
         sessionReused: !!sessionId,
@@ -24255,11 +24626,14 @@ var NamedConnectionController = class {
       };
     }
     return {
+      ...routing,
       ...receipt,
-      connectionName: saved.name,
+      connectionName: connection.name,
       sessionReused: !!sessionId,
-      connectionUpdated: true,
-      connectionRevision: saved.revision,
+      connectionUpdated: options.sessionScope === "shared",
+      callerBindingUpdated: options.sessionScope === "caller",
+      connectionRevision: options.sessionScope === "shared" ? saved.revision : connection.revision,
+      callerBindingRevision: options.sessionScope === "caller" ? saved.revision : null,
       workspaceUri: saved.uri
     };
   }
@@ -24740,8 +25114,40 @@ function locateNewAgentTarget(document) {
   return { state: "blocked" };
 }
 
+// caller-identity.mjs
+var THREAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function resolveCallerIdentity({ meta: meta2, env = process.env, instanceId } = {}) {
+  const supplied = meta2 && typeof meta2 === "object" && !Array.isArray(meta2) ? meta2.threadId : void 0;
+  const raw = supplied === void 0 ? String(env.CODEX_THREAD_ID || "").trim() : supplied;
+  if (supplied !== void 0 || raw) {
+    if (typeof raw !== "string" || !THREAD_ID.test(raw)) {
+      throw Object.assign(new Error("CALLER_IDENTITY_INVALID: threadId must be a UUID"), { code: "CALLER_IDENTITY_INVALID" });
+    }
+    return { key: `codex-thread:${raw.toLowerCase()}`, source: supplied === void 0 ? "environment" : "mcp-threadId", persistent: true };
+  }
+  if (!instanceId) throw Object.assign(new Error("CALLER_IDENTITY_REQUIRED: no adapter identity"), { code: "CALLER_IDENTITY_REQUIRED" });
+  return { key: `adapter:${instanceId}`, source: "adapter-instance", persistent: false };
+}
+var CallerBridgePool = class {
+  constructor(defaultBridge, createBridge, { env = process.env } = {}) {
+    this.defaultBridge = defaultBridge;
+    this.createBridge = createBridge;
+    this.env = env;
+    this.bridges = /* @__PURE__ */ new Map([[defaultBridge.callerIdentity.key, defaultBridge]]);
+  }
+  forRequest(request2) {
+    const identity = resolveCallerIdentity({
+      meta: request2?.params?._meta,
+      env: this.env,
+      instanceId: this.defaultBridge.sessionInstanceId
+    });
+    if (!this.bridges.has(identity.key)) this.bridges.set(identity.key, this.createBridge(identity));
+    return this.bridges.get(identity.key);
+  }
+};
+
 // server.mjs
-var PLUGIN_VERSION = "6.0.9-ssh.4";
+var PLUGIN_VERSION = "6.0.9-ssh.5";
 var CDP_PORT2 = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 var ORIGIN = `http://localhost:${CDP_PORT2}`;
 var QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 3e5);
@@ -24768,8 +25174,8 @@ function sameSessionProject(left, right) {
   if (isSshWorkspaceUri(left) || isSshWorkspaceUri(right)) {
     return isSshWorkspaceUri(left) && isSshWorkspaceUri(right) && parseSshWorkspace(left).uri === parseSshWorkspace(right).uri;
   }
-  const a = resolve9(String(left || ""));
-  const b = resolve9(String(right || ""));
+  const a = resolve10(String(left || ""));
+  const b = resolve10(String(right || ""));
   return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
 }
 function searchResultContract() {
@@ -24850,13 +25256,13 @@ var DO_DEFAULT_CONTRACT = "\n\nCompletion requirements: Work directly in the wor
 var DO_LANGUAGE_CONTRACT = "\n\nResponse language: Reply in the language of the user task unless it explicitly requests another language. Never translate paths, commands, identifiers, keys, enum values, exact options, or error/status codes.";
 var CDP_HOST2 = "127.0.0.1";
 function httpJson(path) {
-  return new Promise((resolve10, reject) => {
+  return new Promise((resolve11, reject) => {
     const req = http2.get({ host: CDP_HOST2, port: CDP_PORT2, path }, (res) => {
       let d = "";
       res.on("data", (c) => d += c);
       res.on("end", () => {
         try {
-          resolve10(JSON.parse(d));
+          resolve11(JSON.parse(d));
         } catch {
           reject(new Error("CDP returned a non-JSON response"));
         }
@@ -26288,16 +26694,16 @@ function lifecycleFailureSummary(lifecycle, fallback) {
   return [lifecycle.message || fallback, `[${diagnostic}]`, original].filter(Boolean).join(" ");
 }
 function releaseAdapterWorkingDirectory({ targetDir = null, chdir = process.chdir } = {}) {
-  const target = targetDir ? ensureLifecycleDir(targetDir) : dirname8(process.execPath);
+  const target = targetDir ? ensureLifecycleDir(targetDir) : dirname10(process.execPath);
   chdir(target);
   return target;
 }
 var CursorBridge = class {
   constructor(options = {}) {
-    this.adapterStartCwd = resolve9(options.adapterStartCwd || process.cwd());
+    this.adapterStartCwd = resolve10(options.adapterStartCwd || process.cwd());
     this.environmentDelegationMode = normalizeDelegationMode(options.delegationMode || DELEGATION_MODE);
     this._syncDelegationState();
-    this.runtimeFile = options.runtimeFile === null ? null : resolve9(options.runtimeFile || resolveCursorRuntimeFile());
+    this.runtimeFile = options.runtimeFile === null ? null : resolve10(options.runtimeFile || resolveCursorRuntimeFile());
     this.runtimeModeDefault = normalizeCursorRuntimeMode(
       options.runtimeModeDefault || process.env.CURSOR_BRIDGE_RUNTIME_MODE,
       "normal"
@@ -26308,20 +26714,23 @@ var CursorBridge = class {
     this.runtimeMode = normalizeCursorRuntimeMode(requestedRuntimeMode);
     this.runtimeModeSource = options.runtimeMode !== void 0 ? "constructor" : persistedRuntimeMode ? "persistent" : process.env.CURSOR_BRIDGE_RUNTIME_MODE ? "environment" : "default";
     this.runtimeModeScope = persistedRuntimeMode ? "persistent" : options.runtimeMode !== void 0 ? "constructor" : process.env.CURSOR_BRIDGE_RUNTIME_MODE ? "environment" : "default";
-    this.workspaceFile = options.workspaceFile === null ? null : resolve9(options.workspaceFile || resolveWorkspaceBindingFile());
+    this.workspaceFile = options.workspaceFile === null ? null : resolve10(options.workspaceFile || resolveWorkspaceBindingFile());
     this.workspaceKey = options.workspaceKey || resolveWorkspaceBindingKey(process.env, { cwd: this.adapterStartCwd });
     const persistedWorkspace = options.projectPath === void 0 ? readWorkspaceBinding(this.workspaceFile, this.workspaceKey) : null;
-    this.projectPath = options.projectPath !== void 0 ? isSshWorkspaceUri(options.projectPath) ? parseSshWorkspace(options.projectPath).uri : resolve9(String(options.projectPath)) : persistedWorkspace && persistedWorkspace.projectPath || null;
+    this.projectPath = options.projectPath !== void 0 ? isSshWorkspaceUri(options.projectPath) ? parseSshWorkspace(options.projectPath).uri : resolve10(String(options.projectPath)) : persistedWorkspace && persistedWorkspace.projectPath || null;
     this.workspaceSource = options.projectPath !== void 0 ? "constructor" : persistedWorkspace ? "persistent_init" : "auto_detect";
     this.workspaceUpdatedAt = persistedWorkspace && persistedWorkspace.updatedAt || null;
     this.workspaceConfirmationRequired = this.workspaceKey === "default" && options.projectPath === void 0;
     if (isSshWorkspaceUri(this.projectPath)) this.workspaceConfirmationRequired = true;
-    this.modelPreferencesFile = options.modelPreferencesFile === null ? null : resolve9(options.modelPreferencesFile || resolveCursorModelPreferencesFile());
+    this.modelPreferencesFile = options.modelPreferencesFile === null ? null : resolve10(options.modelPreferencesFile || resolveCursorModelPreferencesFile());
     this.modelPreferences = readCursorModelPreferences(this.modelPreferencesFile);
-    this.sessionFile = options.sessionFile === null ? null : resolve9(options.sessionFile || resolveCursorSessionRegistryFile());
+    this.sessionFile = options.sessionFile === null ? null : resolve10(options.sessionFile || resolveCursorSessionRegistryFile());
     this.sessionInstanceId = String(
       options.sessionInstanceId || `cursor-adapter-${createCursorSessionId().slice("cursor-session-".length)}`
     );
+    this.callerIdentity = options.callerIdentity || resolveCallerIdentity({ instanceId: this.sessionInstanceId });
+    this.callerKey = this.callerIdentity.key;
+    this.uiLockPath = options.uiLockPath === null ? null : resolve10(options.uiLockPath || process.env.CURSOR_BRIDGE_UI_LOCK_PATH || join12(dirname10(resolveCursorSessionRegistryFile(null)), `ui-cdp-${CDP_PORT2}.lock`));
     this._lastPresentation = null;
     this.busy = false;
     this.queue = [];
@@ -26340,6 +26749,8 @@ var CursorBridge = class {
     const resolvedProjectPath = this.projectPath || this._lastLifecycle && this._lastLifecycle.projectPath || null;
     return {
       workspaceKey: this.workspaceKey,
+      callerKey: this.callerKey,
+      uiCoordinationVersion: this.uiLockPath ? 1 : 0,
       workspaceIdentitySource: this.workspaceKey === "default" ? "unavailable" : this.workspaceKey.split(":")[0],
       workspaceBusy: this._workspacePending > 0,
       workspaceConfirmationRequired: this.workspaceConfirmationRequired,
@@ -26408,6 +26819,8 @@ var CursorBridge = class {
       state: "creating",
       projectPath,
       workspaceKey: this.workspaceKey,
+      callerKey: this.callerKey,
+      uiCoordinationVersion: this.uiLockPath ? 1 : 0,
       ...isSshWorkspaceUri(projectPath) ? { remoteWorkspace: parseSshWorkspace(projectPath), collaborationKind: "ssh-read-only" } : {},
       agentId: null,
       agentLabel: null,
@@ -26421,6 +26834,7 @@ var CursorBridge = class {
       lease: {
         taskId,
         instanceId: this.sessionInstanceId,
+        adapterPid: process.pid,
         epoch: 1,
         expiresAt: new Date(Date.now() + timeoutMs + 6e4).toISOString()
       },
@@ -26432,7 +26846,7 @@ var CursorBridge = class {
     };
     return updateCursorSessionRegistry(this.sessionFile, (registry2) => {
       if (isSshWorkspaceUri(projectPath)) {
-        const duplicate = Object.values(registry2.sessions).find((item) => item.collaborationKind === "ssh-read-only" && item.workspaceKey === this.workspaceKey && sameSessionProject(item.projectPath, projectPath) && item.lastRequestId === requestId);
+        const duplicate = Object.values(registry2.sessions).find((item) => item.collaborationKind === "ssh-read-only" && item.callerKey === this.callerKey && sameSessionProject(item.projectPath, projectPath) && item.lastRequestId === requestId);
         if (duplicate) return { ...duplicate, duplicateRequest: true };
         this._assertSshRegistryIdle(registry2, projectPath);
       }
@@ -26442,8 +26856,20 @@ var CursorBridge = class {
     }, { now });
   }
   _assertSshRegistryIdle(registry2, projectPath, ownSessionId = "") {
-    const blocking = Object.values(registry2.sessions).find((item) => item.id !== ownSessionId && item.collaborationKind === "ssh-read-only" && sameSessionProject(item.projectPath, projectPath) && (item.activeTaskId || ["creating", "busy", "needs_attention"].includes(item.state)));
-    if (blocking) throw cursorSessionError("SSH_WORKSPACE_BUSY", `SSH workspace is reserved by ${blocking.id}; collect or reconcile that exact session before submitting another`);
+    const blocking = Object.values(registry2.sessions).find((item) => {
+      if (item.id === ownSessionId || item.collaborationKind !== "ssh-read-only" || !sameSessionProject(item.projectPath, projectPath) || !(item.activeTaskId || ["creating", "busy", "needs_attention"].includes(item.state))) return false;
+      if (item.uiCoordinationVersion !== 1 || item.scopeEnvelope?.readOnly !== true) return true;
+      if (item.agentId) return false;
+      const pid = item.lease?.adapterPid;
+      if (item.state !== "creating" || !Number.isSafeInteger(pid) || pid <= 0 || !(Date.parse(item.lease?.expiresAt) > Date.now())) return true;
+      try {
+        process.kill(pid, 0);
+        return false;
+      } catch (error2) {
+        return error2.code === "ESRCH";
+      }
+    });
+    if (blocking) throw cursorSessionError("SSH_WORKSPACE_BUSY", `SSH workspace has a legacy or uncertain unbound session ${blocking.id}; recover that exact session before submitting another`);
   }
   _claimExistingSession({ sessionId, taskId, projectPath, readOnly, allowedPaths, requestId, timeoutMs }) {
     if (!this.sessionFile) throw cursorSessionError("SESSION_STORAGE_DISABLED", "persistent session storage is disabled");
@@ -26508,6 +26934,7 @@ var CursorBridge = class {
       session.lease = {
         taskId,
         instanceId: this.sessionInstanceId,
+        adapterPid: process.pid,
         epoch,
         expiresAt: new Date(nowMs + timeoutMs + 6e4).toISOString()
       };
@@ -26802,6 +27229,13 @@ var CursorBridge = class {
     const result = await this._withWorkspaceAdmission(() => this._initializeWorkspace(projectPath));
     return { ...result, workspaceBusy: this._workspacePending > 0 };
   }
+  async _saveWorkspaceBinding(projectPath) {
+    if (!this.workspaceFile) return writeWorkspaceBinding(this.workspaceFile, this.workspaceKey, projectPath);
+    return withInterprocessLock(
+      `${this.workspaceFile}.write.lock`,
+      () => writeWorkspaceBinding(this.workspaceFile, this.workspaceKey, projectPath)
+    );
+  }
   async _listSshPages() {
     return (await httpJson("/json/list")).filter((page) => page.type === "page" && page.webSocketDebuggerUrl);
   }
@@ -26919,11 +27353,11 @@ var CursorBridge = class {
   async initializeSshWorkspace(workspace, { targetId = "" } = {}) {
     const expected = parseSshWorkspace(workspace);
     return this._withWorkspaceAdmission(async () => {
-      if (this.busy || this.queue.length || this.activeParallel.size) {
+      if ((this.busy || this.queue.length || this.activeParallel.size) && (!sameSessionProject(this.projectPath, expected.uri) || targetId && targetId !== this._lastLifecycle?.targetId)) {
         throw cursorSessionError("SSH_WORKSPACE_BUSY", "Finish or recover the current task before changing the SSH workspace");
       }
       const match = await this._findSshWorkspace(expected, String(targetId || ""));
-      const saved = writeWorkspaceBinding(this.workspaceFile, this.workspaceKey, expected.uri);
+      const saved = await this._saveWorkspaceBinding(expected.uri);
       this.projectPath = saved.projectPath;
       this.workspaceSource = "persistent_init";
       this.workspaceUpdatedAt = saved.updatedAt;
@@ -27010,7 +27444,7 @@ var CursorBridge = class {
       throw new Error("cursor_init cannot change workspace while Cursor tasks are queued or running");
     }
     const previousProjectPath = this.projectPath || this._lastLifecycle && this._lastLifecycle.projectPath || null;
-    const saved = writeWorkspaceBinding(this.workspaceFile, this.workspaceKey, projectPath);
+    const saved = await this._saveWorkspaceBinding(projectPath);
     this.workspaceConfirmationRequired = false;
     this.projectPath = saved.projectPath;
     this.workspaceSource = "persistent_init";
@@ -27311,15 +27745,11 @@ var CursorBridge = class {
       }
       if (!requestId) throw cursorSessionError("SSH_REQUEST_ID_REQUIRED", "SSH tasks require a stable request_id");
       if (sessionMode === "create" && this.sessionFile) {
-        const session2 = Object.values(readCursorSessionRegistry(this.sessionFile).sessions).find((item) => item.collaborationKind === "ssh-read-only" && item.workspaceKey === this.workspaceKey && sameSessionProject(item.projectPath, this.projectPath) && item.lastRequestId === requestId);
+        const session2 = Object.values(readCursorSessionRegistry(this.sessionFile).sessions).find((item) => item.collaborationKind === "ssh-read-only" && item.callerKey === this.callerKey && sameSessionProject(item.projectPath, this.projectPath) && item.lastRequestId === requestId);
         if (session2) {
           const existing = this.tasks.get(session2.activeTaskId || session2.lastTask?.taskId || "");
           return { duplicate: true, response: { duplicate: true, ...existing ? this._compactTaskView(existing) : this._sessionView(session2) } };
         }
-      }
-      const repeatedContinuation = sessionMode === "continue" && this.sessionFile && this._readSession(sessionId)?.lastRequestId === requestId;
-      if (!repeatedContinuation && (this.busy || this.queue.length || this.activeParallel.size)) {
-        throw cursorSessionError("SSH_SESSION_BUSY", "SSH collaboration is serial; collect or recover the active turn before submitting another");
       }
     }
     const requestedTimeoutMs = Number(options.timeoutMs ?? 6e5);
@@ -27436,15 +27866,15 @@ var CursorBridge = class {
     }
   }
   _nextTaskId() {
-    return `cursor-${Date.now().toString(36)}-${this.nextTaskId++}`;
+    return `cursor-task-${createCursorSessionId().slice("cursor-session-".length)}`;
   }
   _enqueue(kind, prompt, options) {
     this._ensureTaskCapacity();
     const id = options.taskId || this._nextTaskId();
     let resolvePromise;
     let rejectPromise;
-    const promise = new Promise((resolve10, reject) => {
-      resolvePromise = resolve10;
+    const promise = new Promise((resolve11, reject) => {
+      resolvePromise = resolve11;
       rejectPromise = reject;
     });
     promise.catch(() => {
@@ -27595,7 +28025,8 @@ var CursorBridge = class {
     }
   }
   _withUiLock(fn) {
-    const run = this._uiTail.then(fn, fn);
+    const execute = () => this.uiLockPath ? withInterprocessLock(this.uiLockPath, fn) : fn();
+    const run = this._uiTail.then(execute, execute);
     this._uiTail = run.catch(() => {
     });
     return run;
@@ -27715,7 +28146,29 @@ var CursorBridge = class {
         try {
           if (job.effectiveExecution === "parallel_agent") {
             job.phase = "submitting";
-            const submitted = await this._withUiLock(() => job.sessionMode === "continue" ? this._submitSessionTurn(job) : this._submitParallelAgent(job));
+            const submitted = await this._withUiLock(async () => {
+              if (isSshWorkspaceUri(job.projectPath) && this.sessionFile) {
+                this._assertSshRegistryIdle(readCursorSessionRegistry(this.sessionFile), job.projectPath, job.sessionId);
+              }
+              try {
+                const result = await (job.sessionMode === "continue" ? this._submitSessionTurn(job) : this._submitParallelAgent(job));
+                if (!result.fallbackReason) {
+                  job.agentId = result.agent.id;
+                  job.agentLabel = result.agent.label || null;
+                  this._bindSessionAgent(job);
+                }
+                return result;
+              } catch (error2) {
+                if (error2 && error2.confirmedNotSent !== true && (job.sendState === "sent" || job.sendState === "dispatching" || job.sentAt)) {
+                  error2.sent = true;
+                  if (!job.agentId) this._safeSettleSessionJob(job, "needs_attention", {
+                    needsAttention: true,
+                    attention: "Submission may have happened without a confirmed Agent identity; recover this exact session before other dispatch."
+                  });
+                }
+                throw error2;
+              }
+            });
             if (submitted.fallbackReason) {
               if (job.sessionMode !== "isolated") {
                 throw cursorSessionError(
@@ -27735,14 +28188,6 @@ var CursorBridge = class {
               const result = await this._withUiLock(() => this._run(job.prompt, job));
               this._finishJob(job, result);
             } else {
-              job.agentId = submitted.agent.id;
-              job.agentLabel = submitted.agent.label || null;
-              try {
-                this._bindSessionAgent(job);
-              } catch (error2) {
-                if (job.sendState === "sent" || job.sentAt) error2.sent = true;
-                throw error2;
-              }
               job.sentAt = job.sentAt || (/* @__PURE__ */ new Date()).toISOString();
               job.phase = "running";
               job.reservationScope = job.readOnly ? "agent" : "paths";
@@ -27779,6 +28224,7 @@ var CursorBridge = class {
             this._finishJob(job, result);
           }
         } catch (error2) {
+          if (error2 && error2.confirmedNotSent !== true && (job.sendState === "sent" || job.sendState === "dispatching" || job.sentAt)) error2.sent = true;
           if (error2 && error2.cancelled || job.cancelRequested) {
             if (error2 && error2.stopConfirmed) {
               this._cancelJob(job, job.cancelReason || error2.message || "Task cancelled", {
@@ -27792,6 +28238,8 @@ var CursorBridge = class {
           } else if (error2 && error2.confirmedTerminal) {
             this.activeParallel.delete(job.id);
             this._failJob(job, error2);
+          } else if (error2 && error2.sent && /^LOCK_/.test(String(error2.code || ""))) {
+            this._orphanParallelJob(job, error2);
           } else if (error2 && error2.sent) {
             job.firstWaitError ||= error2.message;
             job.error = `Submission state is uncertain; monitoring continues by agentId: ${error2.message}`;
@@ -29943,6 +30391,8 @@ var CursorBridge = class {
     const models = this.modelPreferencesView();
     return {
       pluginVersion: PLUGIN_VERSION,
+      callerIdentity: this.callerIdentity,
+      uiCoordination: this.uiLockPath ? "cross-process" : "process-only",
       statusPath: "json-list",
       workspaceKey: workspace.workspaceKey,
       workspaceIdentitySource: workspace.workspaceIdentitySource,
@@ -30161,12 +30611,13 @@ function buildToolDefinitions(bridgeInstance) {
   return [
     {
       name: "cursor_connection",
-      description: "List, inspect or explicitly save user-level named SSH connections. A name persists the exact remote workspace and its dedicated session across new Codex chats. Get/list do not contact Cursor. Do not ask the user to retype host/path when their saved name resolves. Saving a different target requires replace=true.",
+      description: "List, inspect or save named SSH targets. By default each Codex caller has its own dedicated Agent. session_scope=shared explicitly opts into the legacy shared Agent. Get/list do not contact Cursor. Saving a different target requires replace=true.",
       inputSchema: {
         type: "object",
         additionalProperties: false,
         properties: {
           action: { type: "string", enum: ["list", "get", "save"] },
+          session_scope: { type: "string", enum: ["caller", "shared"], default: "caller", description: "caller isolates Agents by Codex thread. shared requires an explicit user request to share the saved Agent." },
           name: { type: "string", description: "Saved connection name, e.g. project-workspace" },
           uri: { type: "string", description: "Required only when explicitly saving an SSH target for the first time" },
           session_id: { type: ["string", "null"], description: "Optional existing read-only Bridge session to keep; it must be present in the shared registry" },
@@ -30178,13 +30629,14 @@ function buildToolDefinitions(bridgeInstance) {
     },
     {
       name: "cursor_connection_send",
-      description: "Send a read-only turn by saved connection name. Automatically reads the stored host/path, revalidates the actual SSH IDE window and continues the saved dedicated Cursor Agent across new Codex chats. No host, path or session ID is required. It creates a first session only if none is saved; new_session=true explicitly creates another Agent. Missing or interrupted sessions never silently fall back to a new chat. Poll and collect with cursor_status using the returned taskId.",
+      description: "Send a read-only turn by connection name. Default session_scope=caller creates an independent Agent per Codex thread and continues only that caller's Agent. Different callers may run concurrently. shared explicitly reuses the legacy shared session when requested. new_session=true creates another Agent within the selected scope. Poll and collect the exact returned taskId.",
       inputSchema: {
         type: "object",
         additionalProperties: false,
         properties: {
           name: { type: "string" },
           prompt: { type: "string" },
+          session_scope: { type: "string", enum: ["caller", "shared"], default: "caller" },
           request_id: { type: "string", minLength: 1, maxLength: 200 },
           new_session: { type: "boolean", default: false },
           target_id: { type: "string" },
@@ -30197,7 +30649,7 @@ function buildToolDefinitions(bridgeInstance) {
     },
     {
       name: "cursor_ssh_init",
-      description: "Bind one already-open classic Cursor IDE SSH folder by exact remote identity. Does not open, close, or switch windows. The first release is single-folder, serial and read-only; use cursor_ssh_session to create a dedicated collaboration chat.",
+      description: "Bind one already-open classic Cursor IDE SSH folder by exact remote identity. Does not open, close, or switch windows. Separate read-only Agents may run concurrently; UI dispatch and collection are coordinated across processes. Use cursor_ssh_session to create a dedicated collaboration chat.",
       inputSchema: {
         type: "object",
         additionalProperties: false,
@@ -30343,6 +30795,12 @@ function buildToolDefinitions(bridgeInstance) {
 var ADAPTER_START_CWD = process.cwd();
 var bridge = new CursorBridge({ adapterStartCwd: ADAPTER_START_CWD });
 var namedConnections = new NamedConnectionController(bridge);
+var callerBridges = new CallerBridgePool(bridge, (identity) => new CursorBridge({
+  adapterStartCwd: ADAPTER_START_CWD,
+  callerIdentity: identity,
+  workspaceKey: identity.key
+}));
+var callerConnections = new WeakMap([[bridge, namedConnections]]);
 var server = new Server(
   { name: "cursor-bridge", version: PLUGIN_VERSION },
   { capabilities: { tools: { listChanged: true } } }
@@ -30393,9 +30851,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request2) => {
   const { name, arguments: args } = request2.params;
   try {
+    const bridge2 = callerBridges.forRequest(request2);
+    if (!callerConnections.has(bridge2)) callerConnections.set(bridge2, new NamedConnectionController(bridge2));
+    const namedConnections2 = callerConnections.get(bridge2);
     if (name === "cursor_connection") {
       const action = args?.action;
-      const result = action === "list" ? namedConnections.list() : action === "get" ? namedConnections.get(args?.name) : action === "save" ? namedConnections.save(
+      const result = action === "list" ? namedConnections2.list({ sessionScope: args?.session_scope }) : action === "get" ? namedConnections2.get(args?.name, { sessionScope: args?.session_scope }) : action === "save" ? namedConnections2.save(
         {
           name: args?.name,
           uri: args?.uri,
@@ -30408,10 +30869,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
     if (name === "cursor_connection_send") {
-      const result = await namedConnections.send(args?.name, args?.prompt, {
+      const result = await namedConnections2.send(args?.name, args?.prompt, {
         requestId: args?.request_id,
         newSession: args?.new_session === true,
         targetId: args?.target_id,
+        sessionScope: args?.session_scope,
         background: args?.background !== false,
         timeoutMs: args?.timeout_ms,
         requestContext: args?.request_context
@@ -30420,11 +30882,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
     }
     if (name === "cursor_ssh_init") {
       if (args?.uri !== void 0 && (args.authority !== void 0 || args.remote_path !== void 0)) throw new Error("Use uri or authority + remote_path, not both");
-      const result = await bridge.initializeSshWorkspace(args?.uri ?? { authority: args?.authority, remotePath: args?.remote_path }, { targetId: args?.target_id });
+      const result = await bridge2.initializeSshWorkspace(args?.uri ?? { authority: args?.authority, remotePath: args?.remote_path }, { targetId: args?.target_id });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
     if (name === "cursor_ssh_session") {
-      const result = await bridge.sshSessionTurn(args?.prompt, {
+      const result = await bridge2.sshSessionTurn(args?.prompt, {
         sessionId: args?.session_id,
         requestId: args?.request_id,
         workspacePath: args?.workspace_uri,
@@ -30435,15 +30897,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
     if (name === "cursor_init") {
-      const result = await bridge.initializeWorkspace(String(args && args.path || ""));
+      const result = await bridge2.initializeWorkspace(String(args && args.path || ""));
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
     if (name === "cursor_context_engine" || name === "cursor_search" || name === "cursor_search_deep") {
-      const result = await bridge.contextEngine(String(args && args.query || ""), { requestContext: args && args.request_context, workspacePath: args && args.workspace_path });
+      const result = await bridge2.contextEngine(String(args && args.query || ""), { requestContext: args && args.request_context, workspacePath: args && args.workspace_path });
       return { content: [{ type: "text", text: String(result) }] };
     }
     if (name === "cursor_do") {
-      const result = await bridge.doTask(String(args && args.prompt || ""), {
+      const result = await bridge2.doTask(String(args && args.prompt || ""), {
         workspacePath: args && args.workspace_path,
         requestContext: args && args.request_context,
         background: !args || args.background !== false,
@@ -30461,7 +30923,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
     if (name === "cursor_task_control") {
-      const result = await bridge.taskControl(args && args.task_id, {
+      const result = await bridge2.taskControl(args && args.task_id, {
         action: args && args.action,
         expectedAgentId: args && args.expected_agent_id,
         confirm: !!(args && args.confirm),
@@ -30471,7 +30933,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
     if (name === "cursor_session_control") {
-      const result = await bridge.sessionControl(args && args.session_id, {
+      const result = await bridge2.sessionControl(args && args.session_id, {
         action: args && args.action,
         confirm: !!(args && args.confirm),
         reason: args && args.reason,
@@ -30482,17 +30944,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
     if (name === "cursor_runtime") {
       const mode = args && args.mode;
       const action = args && args.action;
-      let result = mode === void 0 ? bridge.runtimeModeView() : await bridge.setRuntimeMode(mode, args && args.scope || "persistent");
+      let result = mode === void 0 ? bridge2.runtimeModeView() : await bridge2.setRuntimeMode(mode, args && args.scope || "persistent");
       if (mode !== void 0 && shouldAutoLaunchCursor()) {
-        result = { ...result, prewarm: await ensureBridgeCursor(bridge, "runtime-mode-change") };
+        result = { ...result, prewarm: await ensureBridgeCursor(bridge2, "runtime-mode-change") };
       }
       if (action !== void 0) {
-        result = { ...result, presentation: await bridge.applyRuntimePresentation(action) };
+        result = { ...result, presentation: await bridge2.applyRuntimePresentation(action) };
       }
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
     if (name === "cursor_model") {
-      const result = bridge.configureModelPreferences({
+      const result = bridge2.configureModelPreferences({
         action: args && args.action,
         target: args && args.target,
         model: args && args.model,
@@ -30507,13 +30969,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
       const detail = normalizeStatusDetail(args && args.detail);
       if (detail === "result") {
         if (!args.task_id || args.session_id) throw new Error('RESULT_TASK_REQUIRED: detail="result" requires task_id only');
-        return { content: [{ type: "text", text: await bridge.status(args.task_id, { detail }) }] };
+        return { content: [{ type: "text", text: await bridge2.status(args.task_id, { detail }) }] };
       }
       const statusMs = Math.max(1e3, Number(process.env.CURSOR_BRIDGE_STATUS_TIMEOUT || 8e3));
       let result;
       try {
         result = await Promise.race([
-          args && args.session_id ? Promise.resolve(bridge.sessionStatus(args.session_id)) : bridge.status(args && args.task_id, { detail }),
+          args && args.session_id ? Promise.resolve(bridge2.sessionStatus(args.session_id)) : bridge2.status(args && args.task_id, { detail }),
           new Promise((_, reject) => setTimeout(() => reject(new Error(`cursor_status_timeout_${statusMs}`)), statusMs))
         ]);
       } catch (error2) {
@@ -30522,14 +30984,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
           pluginVersion: PLUGIN_VERSION,
           statusPath: "json-list",
           error: error2 instanceof Error ? error2.message : String(error2),
-          ...bridge.workspaceView(),
-          ...bridge.delegationView(),
-          ...bridge.runtimeModeView(),
-          ...bridge.modelPreferencesView(),
-          ...bridge.sessionRegistryView()
+          ...bridge2.workspaceView(),
+          ...bridge2.delegationView(),
+          ...bridge2.runtimeModeView(),
+          ...bridge2.modelPreferencesView(),
+          ...bridge2.sessionRegistryView()
         } : {
           connected: false,
-          ...bridge._compactStatusCommon(),
+          ...bridge2._compactStatusCommon(),
           ...args && args.task_id ? { found: false, taskId: String(args.task_id) } : {},
           ...args && args.session_id ? { found: false, sessionId: String(args.session_id) } : {},
           error: error2 instanceof Error ? error2.message : String(error2)
@@ -30538,7 +31000,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
     if (name === "cursor_launch") {
-      const r = await ensureBridgeCursor(bridge, "cursor_launch");
+      const r = await ensureBridgeCursor(bridge2, "cursor_launch");
       return { content: [{ type: "text", text: JSON.stringify(r, null, 2) }], isError: !r.ok };
     }
     throw new Error(`Unknown tool: ${name}`);
@@ -30639,6 +31101,7 @@ export {
   shouldAutoLaunchCursor,
   shouldRecoverNormalAgentsPresentation,
   shouldScheduleParallelOriginRestore,
+  main as startMcpServer,
   summarizeCdpPages,
   toolErrorResult,
   uncertainSubmissionReservationScope,

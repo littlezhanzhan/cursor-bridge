@@ -1,4 +1,39 @@
-# Experimental SSH collaboration — 6.0.9-ssh.4
+# Experimental SSH collaboration — 6.0.9-ssh.5
+
+## Caller isolation and concurrent read-only execution
+
+Named connections share the exact SSH target, not an Agent by default.
+`cursor_connection_send` now defaults to `session_scope:"caller"`: each Codex
+thread gets an independent dedicated Agent, and only that thread resumes it.
+The stable identity comes from the host's MCP `_meta.threadId`, falling back to
+`CODEX_THREAD_ID`. If neither is available, each adapter instance remains
+isolated but cannot promise persistence across restart. The current identity
+and its source are exposed in status and connection metadata.
+
+The existing user-level shared session is retained without automatic migration.
+Use `session_scope:"shared"` only when the user explicitly asks to share that
+Agent, or supply an exact `session_id` for an explicit handoff. `new_session:true`
+creates a new Agent only in the selected scope. Caller mappings are stored in
+`caller-connections-v1.json`; the original `connections-v1.json` is preserved.
+
+Different SSH read-only sessions may now run concurrently, including across
+MCP processes. One session still admits only one active turn. A process-shared
+UI lock serializes creation, selection, input and extraction while background
+Agents run independently. Target, composer, session epoch and per-turn reply
+checks remain in place. Task IDs contain UUIDs and retained results belong to
+their caller/adapter; this is polling by exact task ID, not a cross-chat webhook.
+Task results are still process-local. After a restart, recover via the exact
+persistent session instead of querying a foreign process's task ID.
+
+Active older senders and uncertain unbound sessions still block new admission.
+Owner death is rechecked inside the UI critical section before a queued task
+may submit. A live UI-lock owner is never displaced by age. A dead owner can
+be recovered; an ownerless/incomplete lock fails closed for inspection.
+These locks coordinate Bridge processes on one OS host and local filesystem;
+they do not lock a person's mouse/keyboard or provide filesystem write isolation.
+SSH write tasks remain unsupported. Local parallel writable scopes retain their
+existing process-local path-overlap limits; cross-process writable isolation is
+not claimed by this SSH release.
 
 `6.0.9-ssh.4` distinguishes CDP enumeration, missing pinned targets, unreadable
 window identity, UI classification and actual workspace mismatches. Failures
@@ -32,9 +67,9 @@ composer. A New Agent click alone cannot authorize sending into an old chat.
 
 ## Named connections across Codex chats
 
-`6.0.9-ssh.2` added user-level names that are independent of Codex thread IDs and
-working directories. A name stores the exact SSH URI and the default dedicated
-Bridge session. Existing registered names can be listed or inspected without
+`6.0.9-ssh.2` added user-level target names that are independent of Codex thread IDs and
+working directories. Since `6.0.9-ssh.5`, the exact SSH URI is shared but each caller's
+dedicated Bridge session is separate. Existing names can be listed or inspected without
 contacting Cursor:
 
 ```json
@@ -47,8 +82,8 @@ Call `cursor_connection` once to save a target:
 {"action":"save","name":"project","uri":"vscode-remote://ssh-remote+dev/srv/project"}
 ```
 
-An optional `session_id` attaches an existing read-only session already present
-in the shared session registry. It must match the exact URI and scope. A saved
+An optional `session_id` when saving configures the explicit shared default,
+not every caller's default. It must match the exact URI and read-only scope. A saved
 name cannot silently move to another target: retargeting needs `replace:true`.
 When moving a name without explicitly supplying another session, the old default
 session is cleared. Other saved names remain intact.
@@ -58,14 +93,14 @@ In a new Codex chat, the caller only needs `cursor_connection_send`:
 ```json
 {
   "name":"project",
-  "prompt":"Continue the previous read-only investigation.",
+  "prompt":"Inspect the entry points in this chat's dedicated Agent.",
   "request_id":"unique-new-turn-id",
   "request_context":{"sender":"model","source":"user"}
 }
 ```
 
 The controller reads the saved URI, verifies the actual SSH IDE window, and
-continues the stored Agent. It does not ask for the host/path/session again.
+continues only the current caller's stored Agent. It does not ask for the host/path/session again.
 The first send creates a dedicated session if the name has no session yet, then
 persists its ID. `new_session:true` explicitly requests another dedicated Agent.
 Missing, interrupted, closed or mismatched saved sessions never silently fall
@@ -97,7 +132,7 @@ local CDP, including DOM/React reads and targeted keyboard/mouse events.
 - One single-folder `vscode-remote://ssh-remote+alias/absolute/path` workspace.
 - Exact SSH authority and case-sensitive POSIX path matching.
 - A new dedicated chat on the first turn; subsequent turns reuse its exact Agent.
-- Read-only request scope, serial workspace admission and stable request IDs.
+- Read-only request scope, one active turn per session, caller-isolated defaults and stable request IDs.
 - No automatic window opening, closing, project switching, or prompt resubmission.
 - Agents Window, multi-root folders and remote write tasks are outside this MVP.
 

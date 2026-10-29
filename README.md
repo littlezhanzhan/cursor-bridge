@@ -1,5 +1,5 @@
 > SSH preview fork: see [SSH collaboration](./docs/ssh-collaboration.md) for
-> `6.0.9-ssh.4`, its separate marketplace and the two new SSH tools. The remaining
+> `6.0.9-ssh.5`, its separate marketplace and the two new SSH tools. The remaining
 > guide retains upstream local-workspace documentation and historical evidence.
 
 <p align="center">
