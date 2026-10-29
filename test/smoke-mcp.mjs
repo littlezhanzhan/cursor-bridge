@@ -12,6 +12,7 @@ const requiredTools = [
   'cursor_init', 'cursor_context_engine', 'cursor_do', 'cursor_task_control',
   'cursor_session_control', 'cursor_runtime', 'cursor_model', 'cursor_status',
   'cursor_ssh_init', 'cursor_ssh_session', 'cursor_connection', 'cursor_connection_send',
+  'cursor_agent_attach', 'cursor_agent_send',
 ];
 
 function payload(result) {
@@ -46,6 +47,7 @@ async function smoke() {
     CURSOR_BRIDGE_MODEL_PREFERENCES_FILE: join(scratch, 'models.json'),
     CURSOR_BRIDGE_SESSION_FILE: join(scratch, 'sessions.json'),
     CURSOR_BRIDGE_CONNECTIONS_FILE: join(scratch, 'connections.json'),
+    CURSOR_BRIDGE_AGENT_ATTACHMENTS_FILE: join(scratch, 'attachments.json'),
   };
   let client;
   // Reserve a private port and reject its probes, so status never contacts a real Cursor.
@@ -58,6 +60,7 @@ async function smoke() {
       { version: 1, targets: { cce: null, cursor_do: null }, updatedAt: null },
       { version: 1, sessions: {}, updatedAt: null },
       { version: 1, connections: {} },
+      { version: 1, attachments: {} },
     ];
     const snapshots = Object.values(files).map((file, index) => {
       const text = `${JSON.stringify(configs[index])}\n`;

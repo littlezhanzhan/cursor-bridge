@@ -69,6 +69,18 @@ Do not choose parallel execution merely because there are many tasks. When depen
 
 ## Choose isolated or continuous delivery
 
+For an explicitly requested existing IDE conversation, inspect with
+cursor_agent_attach(action="inspect"), confirm the exact intended Agent, then
+attach with expected_agent_id. Attachment sends no message. Use action="get"
+and cursor_agent_send for later turns on this caller's explicit reference.
+Use its pinned window folder rather than this Codex chat's unrelated cwd. Do
+not call cursor_init, create an Agent or reopen a window to continue it.
+Unknown historical Agents receive read-only Bridge access; do not silently
+enable writing. Known trusted access and the conversation model are preserved.
+Other callers must explicitly attach/share. Never overwrite a draft or send a
+readiness message merely to test attachment.
+See [existing Agent attachment](../../docs/existing-agent-attachment.md).
+
 For named SSH connections, `cursor_connection_send` defaults to
 `session_scope="caller"`: a new Codex chat gets its own Agent for that connection,
 and subsequent turns in that chat reuse only its own mapping. The server uses

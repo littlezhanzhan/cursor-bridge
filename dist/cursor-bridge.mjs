@@ -2990,7 +2990,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve11.call(this, root, ref);
+      let _sch = resolve12.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a3 = root.localRefs) === null || _a3 === void 0 ? void 0 : _a3[ref];
         const { schemaId } = this.opts;
@@ -3017,7 +3017,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve11(root, ref) {
+    function resolve12(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3881,7 +3881,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve11(baseURI, relativeURI, options) {
+    function resolve12(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const {
         parsed: baseParsed,
@@ -4272,7 +4272,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve: resolve11,
+      resolve: resolve12,
       resolveComponent,
       equal,
       serialize,
@@ -9500,7 +9500,7 @@ var require_websocket = __commonJS({
     var http3 = __require("http");
     var net2 = __require("net");
     var tls = __require("tls");
-    var { randomBytes, createHash: createHash5 } = __require("crypto");
+    var { randomBytes, createHash: createHash6 } = __require("crypto");
     var { Duplex, Readable } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -10181,7 +10181,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash5("sha1").update(key + GUID).digest("base64");
+        const digest = createHash6("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -10550,7 +10550,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http3 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash5 } = __require("crypto");
+    var { createHash: createHash6 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -10857,7 +10857,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash5("sha1").update(key + GUID).digest("base64");
+        const digest = createHash6("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -11906,18 +11906,18 @@ function findCursorExe(options = {}) {
   return findCursorExeDetails(options)?.path || null;
 }
 function cdpUp(timeoutMs = 1500) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     const req = http.get({ host: CDP_HOST, port: CDP_PORT, path: "/json/version" }, (res) => {
       res.resume();
-      resolve11(res.statusCode === 200);
+      resolve12(res.statusCode === 200);
     });
-    req.on("error", () => resolve11(false));
+    req.on("error", () => resolve12(false));
     req.setTimeout(timeoutMs, () => {
       try {
         req.destroy();
       } catch {
       }
-      resolve11(false);
+      resolve12(false);
     });
   });
 }
@@ -11927,25 +11927,25 @@ function cdpListIsCursor(payload) {
   return CURSOR_CDP_PATH.test(d);
 }
 function cdpIsCursor(timeoutMs = 1500) {
-  return new Promise((resolve11) => {
+  return new Promise((resolve12) => {
     const req = http.get({ host: CDP_HOST, port: CDP_PORT, path: "/json/list" }, (res) => {
       let d = "";
       res.on("data", (c) => d += c);
       res.on("end", () => {
         try {
-          resolve11(cdpListIsCursor(d));
+          resolve12(cdpListIsCursor(d));
         } catch {
-          resolve11(false);
+          resolve12(false);
         }
       });
     });
-    req.on("error", () => resolve11(false));
+    req.on("error", () => resolve12(false));
     req.setTimeout(timeoutMs, () => {
       try {
         req.destroy();
       } catch {
       }
-      resolve11(false);
+      resolve12(false);
     });
   });
 }
@@ -12656,20 +12656,20 @@ var init_win_job_breakaway = __esm({
 
 // cursor-lifecycle-client.mjs
 import net from "node:net";
-import { createHash as createHash4 } from "node:crypto";
+import { createHash as createHash5 } from "node:crypto";
 import {
   existsSync as existsSync4,
-  mkdirSync as mkdirSync9,
-  readFileSync as readFileSync7,
+  mkdirSync as mkdirSync10,
+  readFileSync as readFileSync8,
   realpathSync,
   readdirSync as readdirSync2,
-  renameSync as renameSync7,
-  rmSync as rmSync7,
+  renameSync as renameSync8,
+  rmSync as rmSync8,
   unlinkSync as unlinkSync2,
-  writeFileSync as writeFileSync7
+  writeFileSync as writeFileSync8
 } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { basename as basename6, dirname as dirname9, join as join11, resolve as resolve9, win32 as win32Path } from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { basename as basename7, dirname as dirname10, join as join12, resolve as resolve10, win32 as win32Path } from "node:path";
 function resolveSupervisorSpawnCwd({
   requestedCwd = null,
   runtimeRoot = null,
@@ -12684,9 +12684,9 @@ function resolveSupervisorSpawnCwd({
   return runtimeRoot;
 }
 function resolvePluginLocalLifecycleDir(sourceScript) {
-  const scriptDir = dirname9(resolve9(sourceScript));
-  const pluginRoot = basename6(scriptDir).toLowerCase() === "dist" ? dirname9(scriptDir) : scriptDir;
-  return join11(pluginRoot, ".cursor-bridge-lifecycle");
+  const scriptDir = dirname10(resolve10(sourceScript));
+  const pluginRoot = basename7(scriptDir).toLowerCase() === "dist" ? dirname10(scriptDir) : scriptDir;
+  return join12(pluginRoot, ".cursor-bridge-lifecycle");
 }
 function inspectWindowsAppContainerPath(target, options = {}) {
   const platform = options.platform || process.platform;
@@ -12729,59 +12729,59 @@ function sleep(ms) {
 }
 function resolveSupervisorScript() {
   if (process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT && existsSync4(process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT)) {
-    return resolve9(process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT);
+    return resolve10(process.env.CURSOR_BRIDGE_SUPERVISOR_SCRIPT);
   }
-  const here = dirname9(fileURLToPath(import.meta.url));
+  const here = dirname10(fileURLToPath2(import.meta.url));
   const candidates = [];
   if (typeof process.argv[1] === "string") {
-    const entryDir = dirname9(resolve9(process.argv[1]));
-    candidates.push(join11(entryDir, "dist", "cursor-lifecycle-supervisor.mjs"));
-    candidates.push(join11(entryDir, "cursor-lifecycle-supervisor.mjs"));
+    const entryDir = dirname10(resolve10(process.argv[1]));
+    candidates.push(join12(entryDir, "dist", "cursor-lifecycle-supervisor.mjs"));
+    candidates.push(join12(entryDir, "cursor-lifecycle-supervisor.mjs"));
   }
   candidates.push(
-    join11(here, "dist", "cursor-lifecycle-supervisor.mjs"),
-    join11(here, "cursor-lifecycle-supervisor.mjs")
+    join12(here, "dist", "cursor-lifecycle-supervisor.mjs"),
+    join12(here, "cursor-lifecycle-supervisor.mjs")
   );
   for (const c of candidates) {
     if (existsSync4(c)) return c;
   }
-  return join11(here, "cursor-lifecycle-supervisor.mjs");
+  return join12(here, "cursor-lifecycle-supervisor.mjs");
 }
 function writeRuntimeFile(target, content) {
-  if (existsSync4(target) && readFileSync7(target).equals(content)) return;
+  if (existsSync4(target) && readFileSync8(target).equals(content)) return;
   const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
-  writeFileSync7(temporary, content);
+  writeFileSync8(temporary, content);
   try {
-    renameSync7(temporary, target);
+    renameSync8(temporary, target);
   } catch (error2) {
     if (!existsSync4(target)) {
-      rmSync7(temporary, { force: true });
+      rmSync8(temporary, { force: true });
       throw error2;
     }
-    if (readFileSync7(target).equals(content)) {
-      rmSync7(temporary, { force: true });
+    if (readFileSync8(target).equals(content)) {
+      rmSync8(temporary, { force: true });
       return;
     }
-    rmSync7(target, { force: true });
-    renameSync7(temporary, target);
+    rmSync8(target, { force: true });
+    renameSync8(temporary, target);
   }
 }
 function materializeLifecycleSupervisorRuntime({ sourceScript, dir = defaultLifecycleDir() } = {}) {
   const described = describeLifecycleSupervisorRuntime({ sourceScript, dir });
   const { sourceScript: source, content, fingerprint } = described;
-  const runtimeRoot = join11(ensureLifecycleDir(dir), "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
-  mkdirSync9(runtimeRoot, { recursive: true });
-  const script = join11(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
+  const runtimeRoot = join12(ensureLifecycleDir(dir), "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
+  mkdirSync10(runtimeRoot, { recursive: true });
+  const script = join12(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
   writeRuntimeFile(script, content);
   return { sourceScript: source, script, runtimeRoot, fingerprint };
 }
 function describeLifecycleSupervisorRuntime({ sourceScript, dir = defaultLifecycleDir() } = {}) {
-  const source = resolve9(sourceScript || resolveSupervisorScript());
+  const source = resolve10(sourceScript || resolveSupervisorScript());
   if (!existsSync4(source)) throw new Error(`lifecycle supervisor script missing: ${source}`);
-  const content = readFileSync7(source);
-  const fingerprint = createHash4("sha256").update(content).digest("hex");
-  const runtimeRoot = join11(dir, "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
-  const script = join11(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
+  const content = readFileSync8(source);
+  const fingerprint = createHash5("sha256").update(content).digest("hex");
+  const runtimeRoot = join12(dir, "runtime", `supervisor-${fingerprint.slice(0, 20)}`);
+  const script = join12(runtimeRoot, "cursor-lifecycle-supervisor.mjs");
   return { sourceScript: source, script, runtimeRoot, fingerprint, content };
 }
 function isProcessAlive2(pid) {
@@ -12795,7 +12795,7 @@ function isProcessAlive2(pid) {
 }
 function readPidFile(pidPath) {
   try {
-    const n = Number(String(readFileSync7(pidPath, "utf8")).trim());
+    const n = Number(String(readFileSync8(pidPath, "utf8")).trim());
     return Number.isFinite(n) ? n : null;
   } catch {
     return null;
@@ -12910,7 +12910,7 @@ function tryUnlink(path) {
   }
 }
 function writeBootEnv(dir, extra = {}) {
-  const bootPath = join11(dir, `boot-env-${process.pid}-${Date.now()}.json`);
+  const bootPath = join12(dir, `boot-env-${process.pid}-${Date.now()}.json`);
   const payload = { ...extra };
   for (const [key, value] of Object.entries(process.env)) {
     if (key.startsWith("CURSOR_BRIDGE_") || key === "CURSOR_PROJECT_PATH" || key === "CURSOR_EXE") {
@@ -12921,7 +12921,7 @@ function writeBootEnv(dir, extra = {}) {
   for (const [k, v] of Object.entries(payload)) {
     if (v != null && v !== "") cleaned[k] = String(v);
   }
-  writeFileSync7(bootPath, `${JSON.stringify(cleaned, null, 2)}
+  writeFileSync8(bootPath, `${JSON.stringify(cleaned, null, 2)}
 `, { encoding: "utf8" });
   return bootPath;
 }
@@ -12956,9 +12956,9 @@ async function ensureSupervisorConnected(options = {}) {
     let targetRuntime = null;
     try {
       targetRuntime = options.persistSupervisorRuntime === false ? {
-        sourceScript: resolve9(sourceScript),
-        script: resolve9(sourceScript),
-        runtimeRoot: dirname9(resolve9(sourceScript)),
+        sourceScript: resolve10(sourceScript),
+        script: resolve10(sourceScript),
+        runtimeRoot: dirname10(resolve10(sourceScript)),
         fingerprint: null
       } : describeLifecycleSupervisorRuntime({ sourceScript, dir });
     } catch {
@@ -13042,9 +13042,9 @@ async function ensureSupervisorConnected(options = {}) {
   try {
     ensureLifecycleDir(dir);
     runtime = options.persistSupervisorRuntime === false ? {
-      sourceScript: resolve9(sourceScript),
-      script: resolve9(sourceScript),
-      runtimeRoot: dirname9(resolve9(sourceScript)),
+      sourceScript: resolve10(sourceScript),
+      script: resolve10(sourceScript),
+      runtimeRoot: dirname10(resolve10(sourceScript)),
       fingerprint: null
     } : (options.materializeRuntimeImpl || materializeLifecycleSupervisorRuntime)({ sourceScript, dir });
   } catch (error2) {
@@ -16711,7 +16711,7 @@ var recursive = /* @__PURE__ */ new WeakMap();
 var NONE = 0;
 var ASSUMED = 1;
 var PROVEN = 2;
-function isRecursive(inst, stack, resolve11) {
+function isRecursive(inst, stack, resolve12) {
   const cached2 = recursive.get(inst);
   if (cached2 !== void 0)
     return cached2 ? PROVEN : NONE;
@@ -16721,7 +16721,7 @@ function isRecursive(inst, stack, resolve11) {
   let result = NONE;
   const check = (child) => {
     if (result !== PROVEN && child?._zod) {
-      const answer = isRecursive(child, stack, resolve11);
+      const answer = isRecursive(child, stack, resolve12);
       if (answer > result)
         result = answer;
     }
@@ -16732,7 +16732,7 @@ function isRecursive(inst, stack, resolve11) {
       const desc = Object.getOwnPropertyDescriptor(sh, key);
       if (spread && !desc.enumerable)
         continue;
-      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve11) : NONE;
+      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve12) : NONE;
       if (child > answer)
         answer = child;
     }
@@ -16796,7 +16796,7 @@ function isRecursive(inst, stack, resolve11) {
       break;
     // `$ZodLazy` caches its inner on the def, so a resolved edge is followed exactly
     case "lazy": {
-      const inner = def._cachedInner ?? (resolve11 ? inst._zod.innerType : void 0);
+      const inner = def._cachedInner ?? (resolve12 ? inst._zod.innerType : void 0);
       merge2(inner ? isRecursive(inner, stack, false) : ASSUMED);
       break;
     }
@@ -21898,7 +21898,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve11) => setTimeout(resolve11, pollInterval));
+        await new Promise((resolve12) => setTimeout(resolve12, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -21915,7 +21915,7 @@ var Protocol = class {
    */
   request(request2, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve11, reject) => {
+    return new Promise((resolve12, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -21993,7 +21993,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve11(parseResult.data);
+            resolve12(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -22255,12 +22255,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve11, reject) => {
+    return new Promise((resolve12, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve11, interval);
+      const timeoutId = setTimeout(resolve12, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -23136,19 +23136,19 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve11) => {
+    return new Promise((resolve12) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve11();
+        resolve12();
       } else {
-        this._stdout.once("drain", resolve11);
+        this._stdout.once("drain", resolve12);
       }
     });
   }
 };
 
 // server.mjs
-import { basename as basename7, dirname as dirname10, join as join12, resolve as resolve10 } from "node:path";
+import { basename as basename8, dirname as dirname11, join as join13, resolve as resolve11 } from "node:path";
 import { statSync as statSync4 } from "node:fs";
 
 // node_modules/ws/wrapper.mjs
@@ -23211,8 +23211,8 @@ function makeClient(wsUrl, options = {}) {
   let readyResolve;
   let readyReject;
   const pending = /* @__PURE__ */ new Map();
-  const ready = new Promise((resolve11, reject) => {
-    readyResolve = resolve11;
+  const ready = new Promise((resolve12, reject) => {
+    readyResolve = resolve12;
     readyReject = reject;
   });
   void ready.catch(() => {
@@ -23363,7 +23363,7 @@ function makeClient(wsUrl, options = {}) {
         elapsedMs: 0
       }));
     }
-    return new Promise((resolve11, reject) => {
+    return new Promise((resolve12, reject) => {
       const startedAt = Date.now();
       const timer = setTimeout(() => {
         if (!pending.delete(id)) return;
@@ -23374,7 +23374,7 @@ function makeClient(wsUrl, options = {}) {
           elapsedMs: Date.now() - startedAt
         }));
       }, timeoutMs);
-      pending.set(id, { method, resolve: resolve11, reject, timer, startedAt });
+      pending.set(id, { method, resolve: resolve12, reject, timer, startedAt });
       try {
         ws.send(payload, (cause) => {
           if (!cause || !pending.has(id)) return;
@@ -25149,8 +25149,541 @@ var CallerBridgePool = class {
   }
 };
 
+// existing-agent.mjs
+import { fileURLToPath } from "node:url";
+init_remote_workspace();
+init_workspace_binding();
+
+// agent-attachments.mjs
+init_workspace_binding();
+init_remote_workspace();
+import { createHash as createHash4, randomUUID as randomUUID4 } from "node:crypto";
+import {
+  mkdirSync as mkdirSync9,
+  readFileSync as readFileSync7,
+  renameSync as renameSync7,
+  rmSync as rmSync7,
+  writeFileSync as writeFileSync7
+} from "node:fs";
+import { homedir as homedir9 } from "node:os";
+import { basename as basename6, dirname as dirname9, isAbsolute as isAbsolute3, join as join11, resolve as resolve9 } from "node:path";
+var AGENT_ATTACHMENTS_VERSION = 1;
+var CALLER_KEY_PATTERN = /^[0-9a-f]{64}$/;
+var SESSION_ID_PATTERN3 = /^cursor-session-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+var AGENT_ID_PATTERN = /^local:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+var TARGET_ID_PATTERN = /^[A-Za-z0-9._:-]{1,256}$/;
+var TOP_LEVEL_FIELDS2 = Object.freeze(["version", "attachments"]);
+var RECORD_FIELDS = Object.freeze(["sessionId", "agentId", "targetId", "projectPath", "revision", "updatedAt"]);
+var INPUT_FIELDS = Object.freeze(["sessionId", "agentId", "targetId", "projectPath"]);
+var OPTIONS_FIELDS = Object.freeze(["expectedRevision"]);
+function agentAttachmentsError(code, message, cause) {
+  const error2 = new Error(`${code}: ${message}`);
+  error2.code = code;
+  if (cause) error2.cause = cause;
+  return error2;
+}
+function assertExactFields2(value, fields, context) {
+  const actual = Object.keys(value).sort();
+  const expected = [...fields].sort();
+  if (actual.length !== expected.length || actual.some((field, index) => field !== expected[index])) {
+    throw agentAttachmentsError("AGENT_ATTACHMENTS_INVALID", `${context} has missing or unsupported fields`);
+  }
+}
+function isRecord(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function canonicalCallerKey2(value) {
+  if (typeof value !== "string" || !value.trim() || value.includes("\0")) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_CALLER_KEY_INVALID", "callerKey must be a non-empty string without NUL");
+  }
+  return value;
+}
+function callerStorageKey(callerKey) {
+  return createHash4("sha256").update(canonicalCallerKey2(callerKey), "utf8").digest("hex");
+}
+function canonicalSessionId3(value) {
+  if (typeof value !== "string") {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_SESSION_ID_INVALID", "sessionId must use the cursor-session-UUID format");
+  }
+  const match = SESSION_ID_PATTERN3.exec(value);
+  if (!match) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_SESSION_ID_INVALID", "sessionId must use the cursor-session-UUID format");
+  }
+  return `cursor-session-${match[1].toLowerCase()}`;
+}
+function canonicalAgentId(value) {
+  if (typeof value !== "string") {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_AGENT_ID_INVALID", "agentId must use the local:UUID format");
+  }
+  const match = AGENT_ID_PATTERN.exec(value);
+  if (!match) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_AGENT_ID_INVALID", "agentId must use the local:UUID format");
+  }
+  return `local:${match[1].toLowerCase()}`;
+}
+function canonicalTargetId(value) {
+  if (typeof value !== "string" || !TARGET_ID_PATTERN.test(value)) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_TARGET_ID_INVALID", "targetId must be 1-256 ASCII letters, digits, dot, underscore, colon or dash");
+  }
+  return value;
+}
+function canonicalProjectPath(value) {
+  if (typeof value !== "string" || value.includes("\0") || !isAbsoluteWorkspacePath(value)) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_PROJECT_PATH_INVALID", "projectPath must be an absolute local workspace path or a valid SSH workspace URI");
+  }
+  try {
+    if (isSshWorkspaceUri(value)) return parseSshWorkspace(value).uri;
+    const normalized = normalizeWorkspacePath(value);
+    if (!normalized || !isAbsolute3(normalized)) {
+      throw new Error("local workspace path is not absolute after normalization");
+    }
+    return normalized;
+  } catch (error2) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_PROJECT_PATH_INVALID", error2.message, error2);
+  }
+}
+function canonicalInput(value) {
+  if (!isRecord(value)) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_INVALID", "attachment must be an object");
+  }
+  assertExactFields2(value, INPUT_FIELDS, "attachment input");
+  return {
+    sessionId: canonicalSessionId3(value.sessionId),
+    agentId: canonicalAgentId(value.agentId),
+    targetId: canonicalTargetId(value.targetId),
+    projectPath: canonicalProjectPath(value.projectPath)
+  };
+}
+function canonicalRevision(value, { allowZero = false } = {}) {
+  const minimum = allowZero ? 0 : 1;
+  if (!Number.isSafeInteger(value) || value < minimum) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_REVISION_INVALID", `revision must be a safe integer of at least ${minimum}`);
+  }
+  return value;
+}
+function canonicalTimestamp(value) {
+  if (typeof value !== "string") {
+    throw agentAttachmentsError("AGENT_ATTACHMENTS_INVALID", "updatedAt must be a canonical ISO timestamp");
+  }
+  const time3 = Date.parse(value);
+  if (!Number.isFinite(time3) || new Date(time3).toISOString() !== value) {
+    throw agentAttachmentsError("AGENT_ATTACHMENTS_INVALID", "updatedAt must be a canonical ISO timestamp");
+  }
+  return value;
+}
+function emptyAgentAttachments() {
+  return { version: AGENT_ATTACHMENTS_VERSION, attachments: {} };
+}
+function validateRecord(value, key) {
+  if (!isRecord(value)) {
+    throw agentAttachmentsError("AGENT_ATTACHMENTS_INVALID", `attachment ${key} must be an object`);
+  }
+  assertExactFields2(value, RECORD_FIELDS, `attachment ${key}`);
+  if (!CALLER_KEY_PATTERN.test(key)) {
+    throw agentAttachmentsError("AGENT_ATTACHMENTS_INVALID", `attachment key ${key} must be a SHA-256 hex digest`);
+  }
+  const record2 = {
+    sessionId: canonicalSessionId3(value.sessionId),
+    agentId: canonicalAgentId(value.agentId),
+    targetId: canonicalTargetId(value.targetId),
+    projectPath: canonicalProjectPath(value.projectPath),
+    revision: canonicalRevision(value.revision),
+    updatedAt: canonicalTimestamp(value.updatedAt)
+  };
+  for (const field of RECORD_FIELDS) {
+    if (record2[field] !== value[field]) {
+      throw agentAttachmentsError("AGENT_ATTACHMENTS_INVALID", `attachment ${key} field ${field} is not canonical`);
+    }
+  }
+  return record2;
+}
+function validateState(value) {
+  if (!isRecord(value) || value.version !== AGENT_ATTACHMENTS_VERSION) {
+    throw agentAttachmentsError(
+      "AGENT_ATTACHMENTS_SCHEMA_UNSUPPORTED",
+      `expected version ${AGENT_ATTACHMENTS_VERSION}, received ${value && value.version}`
+    );
+  }
+  assertExactFields2(value, TOP_LEVEL_FIELDS2, "agent attachments registry");
+  if (!isRecord(value.attachments)) {
+    throw agentAttachmentsError("AGENT_ATTACHMENTS_INVALID", "attachments must be an object");
+  }
+  const attachments = {};
+  for (const key of Object.keys(value.attachments)) {
+    attachments[key] = validateRecord(value.attachments[key], key);
+  }
+  return { version: AGENT_ATTACHMENTS_VERSION, attachments };
+}
+function readAgentAttachments(filePath) {
+  if (!filePath) return emptyAgentAttachments();
+  let text;
+  try {
+    text = readFileSync7(filePath, "utf8");
+  } catch (error2) {
+    if (error2 && error2.code === "ENOENT") return emptyAgentAttachments();
+    throw agentAttachmentsError(
+      "AGENT_ATTACHMENTS_READ_FAILED",
+      `failed to read ${filePath}: ${error2 instanceof Error ? error2.message : String(error2)}`,
+      error2
+    );
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error2) {
+    throw agentAttachmentsError("AGENT_ATTACHMENTS_INVALID", `failed to parse ${filePath}`, error2);
+  }
+  return validateState(parsed);
+}
+function writeAgentAttachments(filePath, state) {
+  const target = resolve9(filePath);
+  const validated = validateState(state);
+  mkdirSync9(dirname9(target), { recursive: true });
+  const temporary = join11(dirname9(target), `.${basename6(target)}.${process.pid}.${randomUUID4()}.tmp`);
+  try {
+    writeFileSync7(temporary, `${JSON.stringify(validated, null, 2)}
+`, { encoding: "utf8", mode: 384 });
+    renameSync7(temporary, target);
+  } catch (error2) {
+    rmSync7(temporary, { force: true });
+    throw agentAttachmentsError(
+      "AGENT_ATTACHMENTS_WRITE_FAILED",
+      `failed to persist ${target}: ${error2 instanceof Error ? error2.message : String(error2)}`,
+      error2
+    );
+  }
+  return validated;
+}
+function resolveAgentAttachmentsFile(env = process.env) {
+  const configured = String(env?.CURSOR_BRIDGE_AGENT_ATTACHMENTS_FILE || "").trim();
+  if (configured) return resolve9(configured);
+  const appData = String(env?.APPDATA || "").trim();
+  const configRoot = appData && isAbsolute3(appData) ? appData : join11(homedir9(), "AppData", "Roaming");
+  return resolve9(configRoot, "cursor-bridge", "agent-attachments-v1.json");
+}
+function getAgentAttachment(filePath, callerKey) {
+  const storageKey = callerStorageKey(callerKey);
+  const state = readAgentAttachments(filePath);
+  const record2 = Object.hasOwn(state.attachments, storageKey) ? state.attachments[storageKey] : null;
+  return record2 ? { ...record2 } : null;
+}
+async function setAgentAttachment(filePath, callerKey, input, options = {}) {
+  if (typeof filePath !== "string" || !filePath.trim()) {
+    throw agentAttachmentsError("AGENT_ATTACHMENTS_PATH_REQUIRED", "file must be a non-empty path");
+  }
+  if (!isRecord(options)) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_OPTIONS_INVALID", "options must contain expectedRevision");
+  }
+  if (Object.keys(options).some((field) => !OPTIONS_FIELDS.includes(field))) {
+    throw agentAttachmentsError("AGENT_ATTACHMENTS_INVALID", "attachment options contain unsupported fields");
+  }
+  if (!Object.hasOwn(options, "expectedRevision")) {
+    throw agentAttachmentsError("AGENT_ATTACHMENT_REVISION_REQUIRED", "expectedRevision is required");
+  }
+  const expectedRevision = canonicalRevision(options.expectedRevision, { allowZero: true });
+  const value = canonicalInput(input);
+  const storageKey = callerStorageKey(callerKey);
+  const target = resolve9(filePath);
+  return withInterprocessLock(`${target}.lock`, async () => {
+    const state = readAgentAttachments(target);
+    const current = Object.hasOwn(state.attachments, storageKey) ? state.attachments[storageKey] : null;
+    if (expectedRevision === 0 && current) {
+      throw agentAttachmentsError("AGENT_ATTACHMENT_REVISION_CONFLICT", "expected an absent attachment at revision 0");
+    }
+    if (expectedRevision > 0 && (!current || current.revision !== expectedRevision)) {
+      throw agentAttachmentsError(
+        "AGENT_ATTACHMENT_REVISION_CONFLICT",
+        `expected revision ${expectedRevision}, received ${current ? current.revision : "absent"}`
+      );
+    }
+    const record2 = {
+      ...value,
+      revision: (current?.revision || 0) + 1,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    state.attachments[storageKey] = record2;
+    writeAgentAttachments(target, state);
+    return { ...record2 };
+  });
+}
+
+// existing-agent.mjs
+var active = (s) => !!(s.activeTaskId || ["creating", "busy", "needs_attention"].includes(s.state));
+function failure4(code, message) {
+  return Object.assign(new Error(`${code}: ${message}`), { code });
+}
+function localKey(path) {
+  const key = normalizeWorkspacePath(path);
+  return process.platform === "win32" ? key.toLowerCase() : key;
+}
+function existingWindowProject(raw, expected) {
+  const identity = typeof raw === "string" ? JSON.parse(raw) : raw;
+  if (!identity || identity.workspace || !identity.folderUri) throw failure4("AGENT_WORKSPACE_UNRESOLVED", "One existing folder must be identified");
+  const folder = identity.folderUri;
+  let projectPath;
+  if (identity.remoteAuthority) {
+    const candidate = typeof folder === "string" ? folder : { scheme: folder.scheme, authority: folder.authority, remotePath: folder.path };
+    projectPath = parseSshWorkspace(expected || candidate).uri;
+    if (!inspectSshWindowIdentity(identity, projectPath).ok) throw failure4("AGENT_WORKSPACE_MISMATCH", "The window is not the requested SSH folder");
+  } else {
+    let url;
+    if (typeof folder === "string") url = new URL(folder);
+    else {
+      if (folder.scheme !== "file" || typeof folder.path !== "string" || !folder.path.startsWith("/") || folder.query || folder.fragment) throw failure4("AGENT_WORKSPACE_UNRESOLVED", "Expected a local file URI");
+      url = new URL(`file://${folder.authority || ""}${encodeURI(folder.path).replaceAll("#", "%23").replaceAll("?", "%3F")}`);
+    }
+    if (url.protocol !== "file:" || url.search || url.hash || url.username || url.password) throw failure4("AGENT_WORKSPACE_UNRESOLVED", "Expected a plain file URI");
+    projectPath = normalizeWorkspacePath(fileURLToPath(url));
+    if (expected && (isSshWorkspaceUri(expected) || localKey(expected) !== localKey(projectPath))) throw failure4("AGENT_WORKSPACE_MISMATCH", "The window is not the requested local folder");
+  }
+  return { projectPath, workspaceKind: isSshWorkspaceUri(projectPath) ? "ssh" : "local", identity };
+}
+function inspectExistingAgentDocument(document, adapterEntries) {
+  const visible = (n) => !!(n && (n.offsetParent !== null || n.getClientRects?.().length));
+  const bars = [...document.querySelectorAll(".composer-bar[data-composer-id]")].filter(visible);
+  if (bars.length !== 1) return { attachable: false, reason: "composer_ambiguous", composerCount: bars.length };
+  const bar = bars[0], raw = String(bar.dataset?.composerId || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw)) return { attachable: false, reason: "composer_id_invalid" };
+  const agentId = `local:${raw.toLowerCase()}`;
+  const entries = (adapterEntries || []).filter((e) => e.id?.toLowerCase() === agentId);
+  if (entries.length !== 1 || entries[0].durable !== true || entries[0].isSelected !== true) return { attachable: false, reason: "durable_selected_agent_unconfirmed", agentId };
+  const status = String(bar.dataset?.composerStatus || "").toLowerCase();
+  const idle = ["completed", "cancelled", "error", "failed"].includes(status) && !entries[0].showSpinner;
+  const inputs = [...bar.querySelectorAll('[contenteditable="true"].ui-prompt-input-editor__input,.tiptap.ProseMirror[contenteditable="true"],.aislash-editor-input')].filter(visible);
+  const draftLength = inputs.length === 1 ? String(inputs[0].innerText || inputs[0].textContent || "").trim().length : -1;
+  const attachments = [...bar.querySelectorAll('.context-pill,.composer-context-pill,.composer-context-item,.image-preview-img,[data-component="attachment-preview"],[data-testid*="attachment-preview"],input[type="file"]')].filter((n) => !n.closest?.(".markdown-root,.composer-messages-container,.composer-react-transcript-root")).filter((n) => (n.files?.length || 0) > 0 || n.tagName !== "INPUT" && visible(n)).length;
+  const stop = [...bar.querySelectorAll('button[aria-label^="Stop"],[class*="codicon-stop"],[class*="debug-stop"]')].filter(visible).length;
+  const modal = [...document.querySelectorAll('[role="dialog"],dialog[open],.monaco-dialog-box,.quick-input-widget,[data-component="menu-backdrop"]')].some(visible);
+  const md = [...document.querySelectorAll(".markdown-root,.aichat-container [class*=markdown]")].filter((n) => visible(n) && !n.closest?.(".ui-model-picker__trigger,[class*=model-picker]"));
+  const texts = md.map((n) => String(n.innerText || "").trim()).filter(Boolean), last = texts.at(-1) || "";
+  let hash = 0;
+  for (let i = 0; i < last.length; i++) hash = (hash << 5) - hash + last.charCodeAt(i) | 0;
+  const reason = !idle || stop ? "agent_busy_or_unknown" : modal ? "modal_visible" : draftLength !== 0 ? "draft_not_empty_or_input_unknown" : attachments ? "draft_attachments_present" : null;
+  return {
+    identityVerified: true,
+    attachable: !reason,
+    reason,
+    agentId,
+    status,
+    draftLength,
+    attachmentCount: attachments,
+    responseBaseline: { messageCount: texts.length, replyLength: last.length, replyHash: hash }
+  };
+}
+async function evaluate(client, expression) {
+  const result = await client.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, { timeoutMs: 5e3 });
+  if (result.exceptionDetails) throw failure4("AGENT_INSPECTION_FAILED", "The existing page probe failed");
+  return JSON.parse(result.result?.value || "{}");
+}
+var ExistingAgentController = class {
+  constructor(bridge2, { expression, file, createClient = makeClient } = {}) {
+    this.bridge = bridge2;
+    this.expression = expression;
+    this.file = file || resolveAgentAttachmentsFile();
+    this.createClient = createClient;
+  }
+  async _inspectPage(page, options = {}) {
+    const c = this.createClient(page.webSocketDebuggerUrl, { origin: `http://localhost:${Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223)}` });
+    try {
+      await c.ready;
+      const workspace = existingWindowProject(await evaluate(c, EXPR_SSH_WINDOW_IDENTITY), options.workspacePath);
+      const snapshot = await evaluate(c, this.expression);
+      if (options.expectedAgentId && snapshot.agentId !== options.expectedAgentId) throw failure4("AGENT_SELECTION_CHANGED", "The selected Agent changed; no binding or message was made");
+      return { ...snapshot, ...workspace, targetId: page.id };
+    } finally {
+      c.close();
+    }
+  }
+  async inspect(options = {}) {
+    const pages = await this.bridge._listSshPages();
+    const candidates = options.targetId ? pages.filter((p) => p.id === options.targetId) : pages;
+    if (candidates.length !== 1) throw failure4("AGENT_WINDOW_AMBIGUOUS", "Specify the exact existing target_id; no window is opened or guessed");
+    return this._inspectPage(candidates[0], options);
+  }
+  get() {
+    const binding = getAgentAttachment(this.file, this.bridge.callerKey);
+    return {
+      found: !!binding,
+      callerIdentity: this.bridge.callerIdentity,
+      binding,
+      session: binding ? this.bridge.sessionStatus(binding.sessionId) : null
+    };
+  }
+  async ensure(binding) {
+    if ((this.bridge.busy || this.bridge.queue.length || this.bridge.activeParallel.size) && (this.bridge.projectPath !== binding.projectPath || this.bridge._lastLifecycle?.targetId !== binding.targetId)) throw failure4("AGENT_WORKSPACE_BUSY", "Finish current work before changing the attached workspace");
+    const pages = await this.bridge._listSshPages();
+    const page = pages.find((p) => p.id === binding.targetId);
+    if (!page) throw failure4("AGENT_TARGET_MISSING", "The attached window is no longer present; explicitly attach again");
+    const c = this.createClient(page.webSocketDebuggerUrl, { origin: `http://localhost:${Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223)}` });
+    try {
+      await c.ready;
+      existingWindowProject(await evaluate(c, EXPR_SSH_WINDOW_IDENTITY), binding.projectPath);
+    } finally {
+      c.close();
+    }
+    if (this.bridge.projectPath !== binding.projectPath || this.bridge.workspaceConfirmationRequired) {
+      const saved = await this.bridge._saveWorkspaceBinding(binding.projectPath);
+      this.bridge.workspaceUpdatedAt = saved.updatedAt;
+    }
+    this.bridge.projectPath = binding.projectPath;
+    this.bridge.workspaceSource = "persistent_init";
+    this.bridge.workspaceConfirmationRequired = false;
+    this.bridge._lastLifecycle = {
+      ok: true,
+      status: "attached-existing-agent",
+      lifecycleMode: "attached-existing",
+      projectPath: binding.projectPath,
+      targetId: binding.targetId,
+      adapterPid: process.pid
+    };
+    this.bridge._lastWorkspaceBinding = {
+      ok: true,
+      state: "existing-agent-window-verified",
+      projectPath: binding.projectPath,
+      targetId: binding.targetId,
+      agentId: binding.agentId,
+      checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+  async verify(client, job, stage) {
+    existingWindowProject(await evaluate(client, EXPR_SSH_WINDOW_IDENTITY), job.existingAgentTarget.projectPath);
+    if (["before_fill", "before_send", "before_send_fallback", "before_read_reply", "before_stop"].includes(stage)) {
+      const snapshot = await evaluate(client, this.expression);
+      if (snapshot.agentId !== job.agentId || snapshot.identityVerified !== true) throw failure4("AGENT_SELECTION_CHANGED", "The exact attached Agent is not confirmed");
+      if (stage === "before_fill" && !snapshot.attachable) throw failure4("AGENT_DRAFT_OR_BUSY", snapshot.reason || "The existing Agent is not ready");
+      if (stage === "before_send" && (snapshot.reason !== "draft_not_empty_or_input_unknown" || snapshot.draftLength <= 0 || snapshot.attachmentCount !== 0)) {
+        throw failure4("AGENT_INPUT_CHANGED", "The attached input or foreground state changed before submission");
+      }
+      if (stage === "before_send_fallback" && snapshot.reason === "modal_visible") throw failure4("AGENT_INPUT_CHANGED", "A foreground blocker appeared after submission");
+    }
+  }
+  async attach(options = {}) {
+    if (!/^local:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(options.expectedAgentId || "")) throw failure4("AGENT_ASSERTION_REQUIRED", "Inspect first and supply expected_agent_id");
+    options = { ...options, expectedAgentId: options.expectedAgentId.toLowerCase() };
+    return this.bridge._withWorkspaceAdmission(() => this.bridge._withUiLock(async () => {
+      const first = await this.inspect(options);
+      if (!first.attachable) throw failure4("AGENT_NOT_ATTACHABLE", first.reason || "The Agent is not ready");
+      await new Promise((r) => setTimeout(r, 100));
+      const current = await this.inspect({ ...options, targetId: first.targetId, workspacePath: first.projectPath });
+      if (!current.attachable) throw failure4("AGENT_NOT_ATTACHABLE", current.reason || "The Agent changed");
+      if ((this.bridge.busy || this.bridge.queue.length || this.bridge.activeParallel.size) && (this.bridge.projectPath !== current.projectPath || this.bridge._lastLifecycle?.targetId !== current.targetId)) {
+        throw failure4("AGENT_WORKSPACE_BUSY", "Current work must finish before attaching another workspace");
+      }
+      const previous = getAgentAttachment(this.file, this.bridge.callerKey);
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      const registered = updateCursorSessionRegistry(this.bridge.sessionFile, (registry2) => {
+        const matches = Object.values(registry2.sessions).filter((s) => s.agentId === current.agentId);
+        if (matches.some(active)) throw failure4("AGENT_ALREADY_BUSY", "An existing Bridge turn owns this Agent");
+        const reusable = matches.filter((s) => s.state === "ready");
+        if (reusable.length > 1) throw failure4("AGENT_BINDING_AMBIGUOUS", "Multiple existing mappings refer to this Agent");
+        if (reusable.length === 1) {
+          existingWindowProject(current.identity, reusable[0].projectPath);
+          if (reusable[0].origin === "attached-existing") {
+            reusable[0].existingAgentTarget = { agentId: current.agentId, targetId: current.targetId, projectPath: reusable[0].projectPath };
+            reusable[0].updatedAt = now;
+          }
+          return { session: reusable[0], reused: true };
+        }
+        const policies = new Set(matches.map((s) => JSON.stringify({ scope: s.scopeEnvelope, writeEnabled: s.sshWriteEnabled === true })));
+        if (policies.size > 1) throw failure4("AGENT_POLICY_AMBIGUOUS", "The existing policies cannot be safely inferred");
+        const known = matches[0];
+        for (const match of matches) existingWindowProject(current.identity, match.projectPath);
+        const target2 = { agentId: current.agentId, targetId: current.targetId, projectPath: current.projectPath };
+        const session = {
+          id: createCursorSessionId(),
+          state: "ready",
+          projectPath: current.projectPath,
+          workspaceKey: this.bridge.workspaceKey,
+          callerKey: this.bridge.callerKey,
+          uiCoordinationVersion: 1,
+          agentId: current.agentId,
+          agentLabel: null,
+          origin: "attached-existing",
+          existingAgentTarget: target2,
+          ...isSshWorkspaceUri(current.projectPath) ? { collaborationKind: "ssh-read-only", remoteWorkspace: parseSshWorkspace(current.projectPath) } : {},
+          // Unknown historical Agents get read-only Bridge access. Never infer or grant native write permission.
+          scopeEnvelope: known ? JSON.parse(JSON.stringify(known.scopeEnvelope)) : { readOnly: true, allowedPaths: [] },
+          ...known?.sshWriteEnabled === true ? { sshWriteEnabled: true } : {},
+          modelPreference: null,
+          turnIndex: 0,
+          epoch: 0,
+          activeTaskId: null,
+          lastRequestId: null,
+          lastTask: null,
+          lease: null,
+          responseBaseline: current.responseBaseline,
+          createdAt: now,
+          updatedAt: now,
+          closedAt: null,
+          recoveryState: null,
+          attention: null
+        };
+        registry2.sessions[session.id] = session;
+        return { session, reused: false, knownPolicy: !!known };
+      });
+      const target = { agentId: current.agentId, targetId: current.targetId, projectPath: registered.session.projectPath };
+      let binding;
+      try {
+        binding = await setAgentAttachment(
+          this.file,
+          this.bridge.callerKey,
+          { ...target, sessionId: registered.session.id },
+          { expectedRevision: previous?.revision || 0 }
+        );
+        await this.ensure(binding);
+      } catch (error2) {
+        let updated = null;
+        try {
+          updated = getAgentAttachment(this.file, this.bridge.callerKey)?.sessionId === registered.session.id;
+        } catch {
+        }
+        return {
+          attached: true,
+          callerBindingUpdated: updated,
+          workspaceBound: false,
+          warning: error2.message,
+          messageSent: false,
+          ...this.bridge._sessionView(registered.session),
+          targetId: current.targetId
+        };
+      }
+      return {
+        attached: true,
+        callerBindingUpdated: true,
+        workspaceBound: true,
+        reusedSession: registered.reused,
+        messageSent: false,
+        binding,
+        ...this.bridge._sessionView(registered.session),
+        targetId: current.targetId,
+        permissionPolicy: registered.reused || registered.knownPolicy ? "saved-bridge-policy-unchanged" : "read-only-bridge-access"
+      };
+    }));
+  }
+  async send(prompt, options = {}) {
+    if (options.readOnly !== void 0 && typeof options.readOnly !== "boolean") throw failure4("AGENT_TASK_MODE_INVALID", "read_only must be boolean");
+    const binding = getAgentAttachment(this.file, this.bridge.callerKey);
+    if (!binding) throw failure4("AGENT_NOT_ATTACHED", "Explicitly attach the intended existing Agent first");
+    const session = this.bridge._readSession(binding.sessionId);
+    if (!session || session.agentId !== binding.agentId) throw failure4("AGENT_BINDING_MISMATCH", "The saved Agent association changed");
+    const readOnly = options.readOnly === void 0 ? session.scopeEnvelope?.readOnly === true : options.readOnly;
+    return this.bridge.doTask(prompt, {
+      ...options,
+      readOnly,
+      readOnlySpecified: true,
+      allowedPaths: readOnly ? [] : session.scopeEnvelope?.allowedPaths || [],
+      allowedPathsSpecified: true,
+      sessionMode: "continue",
+      sessionId: session.id,
+      execution: "parallel_agent",
+      workspacePath: binding.projectPath,
+      existingAgentTarget: binding
+    });
+  }
+};
+
 // server.mjs
-var PLUGIN_VERSION = "6.0.9-ssh.6";
+var PLUGIN_VERSION = "6.0.9-ssh.7";
 var CDP_PORT2 = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 var ORIGIN = `http://localhost:${CDP_PORT2}`;
 var QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 3e5);
@@ -25177,8 +25710,8 @@ function sameSessionProject(left, right) {
   if (isSshWorkspaceUri(left) || isSshWorkspaceUri(right)) {
     return isSshWorkspaceUri(left) && isSshWorkspaceUri(right) && parseSshWorkspace(left).uri === parseSshWorkspace(right).uri;
   }
-  const a = resolve10(String(left || ""));
-  const b = resolve10(String(right || ""));
+  const a = resolve11(String(left || ""));
+  const b = resolve11(String(right || ""));
   return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
 }
 function searchResultContract() {
@@ -25259,13 +25792,13 @@ var DO_DEFAULT_CONTRACT = "\n\nCompletion requirements: Work directly in the wor
 var DO_LANGUAGE_CONTRACT = "\n\nResponse language: Reply in the language of the user task unless it explicitly requests another language. Never translate paths, commands, identifiers, keys, enum values, exact options, or error/status codes.";
 var CDP_HOST2 = "127.0.0.1";
 function httpJson(path) {
-  return new Promise((resolve11, reject) => {
+  return new Promise((resolve12, reject) => {
     const req = http2.get({ host: CDP_HOST2, port: CDP_PORT2, path }, (res) => {
       let d = "";
       res.on("data", (c) => d += c);
       res.on("end", () => {
         try {
-          resolve11(JSON.parse(d));
+          resolve12(JSON.parse(d));
         } catch {
           reject(new Error("CDP returned a non-JSON response"));
         }
@@ -26504,6 +27037,10 @@ var EXPR_HISTORY_ENTRIES = `(function(){${REACT_ADAPTER_BODY}
   if(!a)return JSON.stringify({ok:false,error:'REACT_ADAPTER_UNAVAILABLE'});
   return JSON.stringify({ok:true,kind:a.kind,entries:a.entries()});
 })()`;
+var EXPR_AGENT_ATTACHMENT_SNAPSHOT = `(function(){${REACT_ADAPTER_BODY}
+  if(!a||a.kind!=='legacy')return JSON.stringify({attachable:false,reason:'classic_adapter_unavailable'});
+  return JSON.stringify((${inspectExistingAgentDocument.toString()})(document,a.entries()));
+})()`;
 function exprOpenAgent(agentId) {
   const id = JSON.stringify(String(agentId));
   return `(async function(){${REACT_ADAPTER_BODY}
@@ -26697,16 +27234,16 @@ function lifecycleFailureSummary(lifecycle, fallback) {
   return [lifecycle.message || fallback, `[${diagnostic}]`, original].filter(Boolean).join(" ");
 }
 function releaseAdapterWorkingDirectory({ targetDir = null, chdir = process.chdir } = {}) {
-  const target = targetDir ? ensureLifecycleDir(targetDir) : dirname10(process.execPath);
+  const target = targetDir ? ensureLifecycleDir(targetDir) : dirname11(process.execPath);
   chdir(target);
   return target;
 }
 var CursorBridge = class {
   constructor(options = {}) {
-    this.adapterStartCwd = resolve10(options.adapterStartCwd || process.cwd());
+    this.adapterStartCwd = resolve11(options.adapterStartCwd || process.cwd());
     this.environmentDelegationMode = normalizeDelegationMode(options.delegationMode || DELEGATION_MODE);
     this._syncDelegationState();
-    this.runtimeFile = options.runtimeFile === null ? null : resolve10(options.runtimeFile || resolveCursorRuntimeFile());
+    this.runtimeFile = options.runtimeFile === null ? null : resolve11(options.runtimeFile || resolveCursorRuntimeFile());
     this.runtimeModeDefault = normalizeCursorRuntimeMode(
       options.runtimeModeDefault || process.env.CURSOR_BRIDGE_RUNTIME_MODE,
       "normal"
@@ -26717,23 +27254,28 @@ var CursorBridge = class {
     this.runtimeMode = normalizeCursorRuntimeMode(requestedRuntimeMode);
     this.runtimeModeSource = options.runtimeMode !== void 0 ? "constructor" : persistedRuntimeMode ? "persistent" : process.env.CURSOR_BRIDGE_RUNTIME_MODE ? "environment" : "default";
     this.runtimeModeScope = persistedRuntimeMode ? "persistent" : options.runtimeMode !== void 0 ? "constructor" : process.env.CURSOR_BRIDGE_RUNTIME_MODE ? "environment" : "default";
-    this.workspaceFile = options.workspaceFile === null ? null : resolve10(options.workspaceFile || resolveWorkspaceBindingFile());
+    this.workspaceFile = options.workspaceFile === null ? null : resolve11(options.workspaceFile || resolveWorkspaceBindingFile());
     this.workspaceKey = options.workspaceKey || resolveWorkspaceBindingKey(process.env, { cwd: this.adapterStartCwd });
     const persistedWorkspace = options.projectPath === void 0 ? readWorkspaceBinding(this.workspaceFile, this.workspaceKey) : null;
-    this.projectPath = options.projectPath !== void 0 ? isSshWorkspaceUri(options.projectPath) ? parseSshWorkspace(options.projectPath).uri : resolve10(String(options.projectPath)) : persistedWorkspace && persistedWorkspace.projectPath || null;
+    this.projectPath = options.projectPath !== void 0 ? isSshWorkspaceUri(options.projectPath) ? parseSshWorkspace(options.projectPath).uri : resolve11(String(options.projectPath)) : persistedWorkspace && persistedWorkspace.projectPath || null;
     this.workspaceSource = options.projectPath !== void 0 ? "constructor" : persistedWorkspace ? "persistent_init" : "auto_detect";
     this.workspaceUpdatedAt = persistedWorkspace && persistedWorkspace.updatedAt || null;
     this.workspaceConfirmationRequired = this.workspaceKey === "default" && options.projectPath === void 0;
     if (isSshWorkspaceUri(this.projectPath)) this.workspaceConfirmationRequired = true;
-    this.modelPreferencesFile = options.modelPreferencesFile === null ? null : resolve10(options.modelPreferencesFile || resolveCursorModelPreferencesFile());
+    this.modelPreferencesFile = options.modelPreferencesFile === null ? null : resolve11(options.modelPreferencesFile || resolveCursorModelPreferencesFile());
     this.modelPreferences = readCursorModelPreferences(this.modelPreferencesFile);
-    this.sessionFile = options.sessionFile === null ? null : resolve10(options.sessionFile || resolveCursorSessionRegistryFile());
+    this.sessionFile = options.sessionFile === null ? null : resolve11(options.sessionFile || resolveCursorSessionRegistryFile());
     this.sessionInstanceId = String(
       options.sessionInstanceId || `cursor-adapter-${createCursorSessionId().slice("cursor-session-".length)}`
     );
     this.callerIdentity = options.callerIdentity || resolveCallerIdentity({ instanceId: this.sessionInstanceId });
     this.callerKey = this.callerIdentity.key;
-    this.uiLockPath = options.uiLockPath === null ? null : resolve10(options.uiLockPath || process.env.CURSOR_BRIDGE_UI_LOCK_PATH || join12(dirname10(resolveCursorSessionRegistryFile(null)), `ui-cdp-${CDP_PORT2}.lock`));
+    this.uiLockPath = options.uiLockPath === null ? null : resolve11(options.uiLockPath || process.env.CURSOR_BRIDGE_UI_LOCK_PATH || join13(dirname11(resolveCursorSessionRegistryFile(null)), `ui-cdp-${CDP_PORT2}.lock`));
+    this.existingAgentController = new ExistingAgentController(this, {
+      expression: EXPR_AGENT_ATTACHMENT_SNAPSHOT,
+      file: options.attachmentFile
+    });
+    this.attachmentFile = this.existingAgentController.file;
     this._lastPresentation = null;
     this.busy = false;
     this.queue = [];
@@ -26796,6 +27338,7 @@ var CursorBridge = class {
       workspaceKey: session.workspaceKey,
       agentId: session.agentId || null,
       agentLabel: session.agentLabel || null,
+      origin: session.origin || "bridge-created",
       turnIndex: Number(session.turnIndex || 0),
       activeTaskId: session.activeTaskId || null,
       lastTask: session.lastTask ? {
@@ -26890,6 +27433,8 @@ var CursorBridge = class {
       if (!sameSessionProject(session.projectPath, projectPath)) {
         throw cursorSessionError("SESSION_WORKSPACE_MISMATCH", `session is bound to ${session.projectPath}`);
       }
+      const competing = Object.values(registry2.sessions).find((other) => other.id !== sessionId && other.agentId && other.agentId === session.agentId && (other.activeTaskId || ["creating", "busy", "needs_attention"].includes(other.state)));
+      if (competing) throw cursorSessionError("SESSION_AGENT_BUSY", "Another session already has an active turn on this exact Agent");
       if (requestId && session.lastRequestId === requestId) {
         return { duplicate: true, session: { ...session } };
       }
@@ -27074,13 +27619,15 @@ var CursorBridge = class {
         ...this._sessionView(initial)
       };
     }
+    if (initial.existingAgentTarget) await this.existingAgentController.ensure(initial.existingAgentTarget);
     const projectPath = this._lastLifecycle && this._lastLifecycle.projectPath || this.projectPath || null;
     if (!sameSessionProject(initial.projectPath, projectPath)) {
       throw cursorSessionError("SESSION_WORKSPACE_MISMATCH", `session is bound to ${initial.projectPath}`);
     }
-    await this._ensureCursor();
+    if (!initial.existingAgentTarget) await this._ensureCursor();
     const probe = {
       agentId: initial.agentId,
+      existingAgentTarget: initial.existingAgentTarget || null,
       targetId: this._lastLifecycle && this._lastLifecycle.targetId,
       execution: "parallel_agent",
       effectiveExecution: "parallel_agent",
@@ -27722,6 +28269,14 @@ var CursorBridge = class {
     if (!text) throw new Error("prompt must not be empty");
     if (text.length > 1e5) throw new Error("prompt exceeds the 100,000-character limit");
     const requestContext = normalizeRequestContext(options.requestContext);
+    const continuingSession = options.sessionMode === "continue" && options.sessionId ? this._readSession(options.sessionId) : null;
+    const pinnedExistingAgent = options.existingAgentTarget || continuingSession?.existingAgentTarget;
+    if (pinnedExistingAgent) {
+      if (!continuingSession || continuingSession.agentId !== pinnedExistingAgent.agentId || !sameSessionProject(continuingSession.projectPath, pinnedExistingAgent.projectPath) || options.workspacePath && !sameSessionProject(options.workspacePath, pinnedExistingAgent.projectPath)) {
+        throw cursorSessionError("AGENT_BINDING_MISMATCH", "The explicit attached Agent association changed");
+      }
+      await this.existingAgentController.ensure(pinnedExistingAgent);
+    }
     this._assertWorkspaceConfirmed(options.workspacePath);
     if (this._hasGlobalReservation()) {
       throw new Error("A global Cursor reservation has an unconfirmed Stop state; no new task may be submitted until it is explicitly recovered or released");
@@ -27779,7 +28334,8 @@ var CursorBridge = class {
     if (sessionMode === "continue" && options.readOnlySpecified !== true && options.allowedPathsSpecified !== true) {
       throw cursorSessionError("SESSION_SCOPE_REQUIRED", "repeat read_only=true or an allowed_paths subset for every continued turn");
     }
-    await this._ensureCursor();
+    const existingAgentTarget = pinnedExistingAgent || null;
+    if (!existingAgentTarget) await this._ensureCursor();
     this._assertWorkspaceConfirmed(options.workspacePath);
     const projectPath = this._lastLifecycle && this._lastLifecycle.projectPath || this.projectPath || null;
     if (sessionMode !== "isolated" && !projectPath) {
@@ -27838,9 +28394,10 @@ var CursorBridge = class {
       newChat: sessionMode !== "continue",
       execution,
       readOnly,
+      existingAgentTarget,
       allowedPaths,
       preferLegacyUi: options.preferLegacyUi === true,
-      modelPreference,
+      modelPreference: existingAgentTarget ? null : modelPreference,
       projectPath,
       sessionMode,
       sessionId: session && session.id || null,
@@ -27884,8 +28441,8 @@ var CursorBridge = class {
     const id = options.taskId || this._nextTaskId();
     let resolvePromise;
     let rejectPromise;
-    const promise = new Promise((resolve11, reject) => {
-      resolvePromise = resolve11;
+    const promise = new Promise((resolve12, reject) => {
+      resolvePromise = resolve12;
       rejectPromise = reject;
     });
     promise.catch(() => {
@@ -27902,6 +28459,7 @@ var CursorBridge = class {
       execution: options.execution || "fifo",
       effectiveExecution: options.execution || "fifo",
       readOnly: options.readOnly === true,
+      existingAgentTarget: options.existingAgentTarget || null,
       allowedPaths: options.allowedPaths || [],
       modelPreference: options.modelPreference ? { ...options.modelPreference } : null,
       modelSelection: options.modelPreference ? { configured: true, applied: false, ...options.modelPreference } : null,
@@ -28795,10 +29353,10 @@ var CursorBridge = class {
       }
     } catch (error2) {
       primaryError = error2 instanceof Error ? error2 : new Error(String(error2));
-      let failure4 = primaryError.modelSelectionFailure;
-      if (!failure4) {
+      let failure5 = primaryError.modelSelectionFailure;
+      if (!failure5) {
         const pickerUnavailable = /model picker (?:is unavailable|did not open)/i.test(primaryError.message);
-        failure4 = {
+        failure5 = {
           failureClass: primaryError.pickerRead ? "picker_read_failed" : pickerUnavailable ? "picker_did_not_open" : "probe_error",
           retryable: true
         };
@@ -28814,14 +29372,14 @@ var CursorBridge = class {
         cdp: primaryError.cdp || null,
         requestedModel,
         requestedEffort,
-        failureClass: failure4.failureClass,
-        retryable: failure4.retryable === true,
-        errorCode: primaryError.code || `CURSOR_MODEL_${String(failure4.failureClass).toUpperCase()}`,
-        available: failure4.available || [],
-        attempts: failure4.attempts || [],
-        trigger: failure4.trigger || null,
-        lastPollError: failure4.lastPollError || null,
-        menu: failure4.menu || null,
+        failureClass: failure5.failureClass,
+        retryable: failure5.retryable === true,
+        errorCode: primaryError.code || `CURSOR_MODEL_${String(failure5.failureClass).toUpperCase()}`,
+        available: failure5.available || [],
+        attempts: failure5.attempts || [],
+        trigger: failure5.trigger || null,
+        lastPollError: failure5.lastPollError || null,
+        menu: failure5.menu || null,
         runtimeMode: this.runtimeMode,
         lastError: primaryError.message,
         failedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -29116,6 +29674,7 @@ var CursorBridge = class {
     throw error2;
   }
   async _verifyAgentsWorkspace(c, job, stage = "before_fill") {
+    if (job?.existingAgentTarget) return this.existingAgentController.verify(c, job, stage);
     if (isSshWorkspaceUri(job?.projectPath || this.projectPath)) return this._verifySshWorkspace(c, job, stage);
     if (!job || job.targetUiFlavor !== "agents_v2") return;
     const projectPath = job.projectPath || this.projectPath;
@@ -29335,7 +29894,7 @@ var CursorBridge = class {
     const page = await findPage({
       targetId: this._lastLifecycle && this._lastLifecycle.targetId,
       purpose: "parallel_agent",
-      preferAgentsV2: !isSshWorkspaceUri(job.projectPath || this.projectPath)
+      preferAgentsV2: !job.existingAgentTarget && !isSshWorkspaceUri(job.projectPath || this.projectPath)
     });
     job.targetId = page.id;
     job.targetUiFlavor = page.capabilities && page.capabilities.uiFlavor || null;
@@ -29343,7 +29902,8 @@ var CursorBridge = class {
     await c.ready;
     let sent = false;
     try {
-      if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_continue");
+      if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, "before_continue");
+      else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_continue");
       this._throwIfCancelledBeforeSend(job);
       await this._ensureChatPanel(c);
       const entries = await this._readAgentEntries(c, true);
@@ -29362,7 +29922,7 @@ var CursorBridge = class {
       await this._waitForSelectedAgent(c, job.agentId);
       await this._ensureChatPanel(c);
       this._throwIfCancelledBeforeSend(job);
-      await this._applyModelPreference(c, job.modelPreference, job);
+      if (!job.existingAgentTarget) await this._applyModelPreference(c, job.modelPreference, job);
       this._throwIfCancelledBeforeSend(job);
       job.responseBaseline = await this._captureSessionResponseBaseline(c);
       this._persistSessionResponseBaseline(job);
@@ -29399,7 +29959,8 @@ var CursorBridge = class {
       const c = makeClient2(page.webSocketDebuggerUrl);
       await c.ready;
       try {
-        if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_poll");
+        if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, "before_poll");
+        else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_poll");
         let entries = await this._readAgentEntries(c);
         let entry = entries.find((e) => e.id === job.agentId) || null;
         if (!entry && (job.execution === "fifo" || job.effectiveExecution === "fifo")) {
@@ -29584,7 +30145,8 @@ var CursorBridge = class {
     throw new Error(`After opening ${agentId}, it could not be confirmed as the selected Agent`);
   }
   async _withRestoredAgentSelection(c, job, operation) {
-    if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_collect");
+    if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, "before_collect");
+    else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_collect");
     const entries = await this._readAgentEntries(c, true);
     const previousSelectedId = (entries.find((entry) => entry.isSelected) || {}).id || null;
     try {
@@ -29592,7 +30154,8 @@ var CursorBridge = class {
     } finally {
       if (previousSelectedId && previousSelectedId !== job.agentId) {
         try {
-          if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_restore");
+          if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, "before_restore");
+          else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_restore");
           const opened = await this._requestExactAgentSelection(c, previousSelectedId);
           if (opened !== "OPENED") throw new Error(`Unable to restore ${previousSelectedId}: ${opened}`);
           await this._waitForSelectedAgent(c, previousSelectedId);
@@ -29616,7 +30179,8 @@ var CursorBridge = class {
         let lastKey = "";
         let stable = 0;
         for (let i = 0; i < 80; i++) {
-          if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_read_reply");
+          if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, "before_read_reply");
+          else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_read_reply");
           const snap = await this._readResponseSnapshot(c);
           const candidate = String(await evalJS(c, EXPR_EXTRACT) || "").trim();
           const hasNewTurn = isSessionTurnReplyReady(job.responseBaseline, snap);
@@ -29907,7 +30471,8 @@ var CursorBridge = class {
     }
   }
   async _stopBoundAgentOnClient(c, job, options = {}) {
-    if (isSshWorkspaceUri(job?.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_stop");
+    if (job?.existingAgentTarget) await this.existingAgentController.verify(c, job, "before_stop_workspace");
+    else if (isSshWorkspaceUri(job?.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, "before_stop");
     if (!job || !job.agentId) return { confirmed: false, state: "unbound_agent" };
     const preferComposer = options.preferComposer === true || job.execution === "fifo" || job.effectiveExecution === "fifo";
     if (preferComposer) {
@@ -30621,6 +31186,38 @@ var WORKSPACE_PATH_SCHEMA = {
 function buildToolDefinitions(bridgeInstance) {
   return [
     {
+      name: "cursor_agent_attach",
+      description: "Inspect or explicitly attach the currently selected saved Agent in one already-open classic Cursor IDE. Supports local and SSH folders. inspect returns metadata only; attach requires expected_agent_id, checks idle/empty draft twice, and never sends a prompt or creates a chat. Unknown historical Agents receive read-only Bridge access; existing trusted policies are preserved. get reads only this caller's saved attachment.",
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          action: { type: "string", enum: ["inspect", "attach", "get"] },
+          expected_agent_id: { type: "string" },
+          target_id: { type: "string" },
+          workspace_path: { type: "string", description: "Optional exact existing window-folder assertion; never switches or registers a workspace" }
+        },
+        required: ["action"]
+      }
+    },
+    {
+      name: "cursor_agent_send",
+      description: "Send a user-authorized task to the exact Agent explicitly attached by this caller. Keeps the existing Cursor window/folder, history and model; never creates another Agent or opens a window. Unknown historical attachments remain read-only. The exact taskId is used for polling/result receipt. Existing unsent drafts block submission instead of being overwritten.",
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          prompt: { type: "string" },
+          request_id: { type: "string", minLength: 1, maxLength: 200 },
+          read_only: { type: "boolean" },
+          background: { type: "boolean", default: true },
+          timeout_ms: { type: "integer", minimum: 3e4, maximum: 9e5, default: 6e5 },
+          request_context: REQUEST_CONTEXT_SCHEMA
+        },
+        required: ["prompt", "request_id"]
+      }
+    },
+    {
       name: "cursor_connection",
       description: "List, inspect or save named SSH targets. By default each Codex caller has its own dedicated Agent. session_scope=shared explicitly opts into the legacy shared Agent. Get/list do not contact Cursor. Saving a different target requires replace=true.",
       inputSchema: {
@@ -30867,6 +31464,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request2) => {
     const bridge2 = callerBridges.forRequest(request2);
     if (!callerConnections.has(bridge2)) callerConnections.set(bridge2, new NamedConnectionController(bridge2));
     const namedConnections2 = callerConnections.get(bridge2);
+    if (name === "cursor_agent_attach") {
+      const options = { targetId: args?.target_id, workspacePath: args?.workspace_path, expectedAgentId: args?.expected_agent_id };
+      const result = args?.action === "get" ? bridge2.existingAgentController.get() : args?.action === "inspect" ? await bridge2.existingAgentController.inspect(options) : args?.action === "attach" ? await bridge2.existingAgentController.attach(options) : (() => {
+        throw new Error("action must be inspect, attach or get");
+      })();
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+    if (name === "cursor_agent_send") {
+      const result = await bridge2.existingAgentController.send(args?.prompt, {
+        requestId: args?.request_id,
+        readOnly: args?.read_only,
+        background: args?.background !== false,
+        timeoutMs: args?.timeout_ms,
+        requestContext: args?.request_context
+      });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
     if (name === "cursor_connection") {
       const action = args?.action;
       const result = action === "list" ? namedConnections2.list({ sessionScope: args?.session_scope }) : action === "get" ? namedConnections2.get(args?.name, { sessionScope: args?.session_scope }) : action === "save" ? namedConnections2.save(
@@ -31054,6 +31668,7 @@ export {
   CURSOR_MODEL_TARGETS,
   CURSOR_RUNTIME_MODES,
   CursorBridge,
+  EXPR_AGENT_ATTACHMENT_SNAPSHOT,
   EXPR_CLICK_SEND,
   EXPR_FIND_NEWAGENT,
   EXPR_HISTORY_ENTRIES,

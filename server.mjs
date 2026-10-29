@@ -72,8 +72,9 @@ import { classifyCursorUiFlavor } from './page-ui-flavor.mjs';
 import { locateNewAgentTarget } from './new-agent-target.mjs';
 import { CallerBridgePool, resolveCallerIdentity } from './caller-identity.mjs';
 import { withInterprocessLock } from './interprocess-lock.mjs';
+import { ExistingAgentController, inspectExistingAgentDocument } from './existing-agent.mjs';
 
-const PLUGIN_VERSION = '6.0.9-ssh.6';
+const PLUGIN_VERSION = '6.0.9-ssh.7';
 const CDP_PORT = Number(process.env.CURSOR_BRIDGE_CDP_PORT || 9223);
 const ORIGIN = `http://localhost:${CDP_PORT}`;
 const QUERY_TIMEOUT = Number(process.env.CURSOR_BRIDGE_TIMEOUT || 300000);
@@ -1536,6 +1537,10 @@ const EXPR_HISTORY_ENTRIES = `(function(){${REACT_ADAPTER_BODY}
   if(!a)return JSON.stringify({ok:false,error:'REACT_ADAPTER_UNAVAILABLE'});
   return JSON.stringify({ok:true,kind:a.kind,entries:a.entries()});
 })()`;
+const EXPR_AGENT_ATTACHMENT_SNAPSHOT = `(function(){${REACT_ADAPTER_BODY}
+  if(!a||a.kind!=='legacy')return JSON.stringify({attachable:false,reason:'classic_adapter_unavailable'});
+  return JSON.stringify((${inspectExistingAgentDocument.toString()})(document,a.entries()));
+})()`;
 
 function exprOpenAgent(agentId) {
   const id = JSON.stringify(String(agentId));
@@ -1833,6 +1838,10 @@ class CursorBridge {
     this.uiLockPath = options.uiLockPath === null ? null : resolve(options.uiLockPath
       || process.env.CURSOR_BRIDGE_UI_LOCK_PATH
       || join(dirname(resolveCursorSessionRegistryFile(null)), `ui-cdp-${CDP_PORT}.lock`));
+    this.existingAgentController = new ExistingAgentController(this, {
+      expression: EXPR_AGENT_ATTACHMENT_SNAPSHOT, file: options.attachmentFile,
+    });
+    this.attachmentFile = this.existingAgentController.file;
     this._lastPresentation = null;
     this.busy = false;
     this.queue = [];
@@ -1899,6 +1908,7 @@ class CursorBridge {
       workspaceKey: session.workspaceKey,
       agentId: session.agentId || null,
       agentLabel: session.agentLabel || null,
+      origin: session.origin || 'bridge-created',
       turnIndex: Number(session.turnIndex || 0),
       activeTaskId: session.activeTaskId || null,
       lastTask: session.lastTask ? {
@@ -2000,6 +2010,10 @@ class CursorBridge {
       if (!sameSessionProject(session.projectPath, projectPath)) {
         throw cursorSessionError('SESSION_WORKSPACE_MISMATCH', `session is bound to ${session.projectPath}`);
       }
+      const competing = Object.values(registry.sessions).find(other => other.id !== sessionId
+        && other.agentId && other.agentId === session.agentId
+        && (other.activeTaskId || ['creating', 'busy', 'needs_attention'].includes(other.state)));
+      if (competing) throw cursorSessionError('SESSION_AGENT_BUSY', 'Another session already has an active turn on this exact Agent');
       if (requestId && session.lastRequestId === requestId) {
         return { duplicate: true, session: { ...session } };
       }
@@ -2198,13 +2212,15 @@ class CursorBridge {
         ...this._sessionView(initial),
       };
     }
+    if (initial.existingAgentTarget) await this.existingAgentController.ensure(initial.existingAgentTarget);
     const projectPath = this._lastLifecycle && this._lastLifecycle.projectPath || this.projectPath || null;
     if (!sameSessionProject(initial.projectPath, projectPath)) {
       throw cursorSessionError('SESSION_WORKSPACE_MISMATCH', `session is bound to ${initial.projectPath}`);
     }
-    await this._ensureCursor();
+    if (!initial.existingAgentTarget) await this._ensureCursor();
     const probe = {
       agentId: initial.agentId,
+      existingAgentTarget: initial.existingAgentTarget || null,
       targetId: this._lastLifecycle && this._lastLifecycle.targetId,
       execution: 'parallel_agent',
       effectiveExecution: 'parallel_agent',
@@ -2832,6 +2848,16 @@ class CursorBridge {
     if (!text) throw new Error('prompt must not be empty');
     if (text.length > 100000) throw new Error('prompt exceeds the 100,000-character limit');
     const requestContext = normalizeRequestContext(options.requestContext);
+    const continuingSession = options.sessionMode === 'continue' && options.sessionId ? this._readSession(options.sessionId) : null;
+    const pinnedExistingAgent = options.existingAgentTarget || continuingSession?.existingAgentTarget;
+    if (pinnedExistingAgent) {
+      if (!continuingSession || continuingSession.agentId !== pinnedExistingAgent.agentId
+          || !sameSessionProject(continuingSession.projectPath, pinnedExistingAgent.projectPath)
+          || (options.workspacePath && !sameSessionProject(options.workspacePath, pinnedExistingAgent.projectPath))) {
+        throw cursorSessionError('AGENT_BINDING_MISMATCH', 'The explicit attached Agent association changed');
+      }
+      await this.existingAgentController.ensure(pinnedExistingAgent);
+    }
     this._assertWorkspaceConfirmed(options.workspacePath);
     if (this._hasGlobalReservation()) {
       throw new Error('A global Cursor reservation has an unconfirmed Stop state; no new task may be submitted until it is explicitly recovered or released');
@@ -2895,7 +2921,8 @@ class CursorBridge {
       throw cursorSessionError('SESSION_SCOPE_REQUIRED', 'repeat read_only=true or an allowed_paths subset for every continued turn');
     }
 
-    await this._ensureCursor();
+    const existingAgentTarget = pinnedExistingAgent || null;
+    if (!existingAgentTarget) await this._ensureCursor();
     this._assertWorkspaceConfirmed(options.workspacePath);
     const projectPath = this._lastLifecycle && this._lastLifecycle.projectPath || this.projectPath || null;
     if (sessionMode !== 'isolated' && !projectPath) {
@@ -2961,9 +2988,10 @@ class CursorBridge {
       newChat: sessionMode !== 'continue',
       execution,
       readOnly,
+      existingAgentTarget,
       allowedPaths,
       preferLegacyUi: options.preferLegacyUi === true,
-      modelPreference,
+      modelPreference: existingAgentTarget ? null : modelPreference,
       projectPath,
       sessionMode,
       sessionId: session && session.id || null,
@@ -3029,6 +3057,7 @@ class CursorBridge {
       execution: options.execution || 'fifo',
       effectiveExecution: options.execution || 'fifo',
       readOnly: options.readOnly === true,
+      existingAgentTarget: options.existingAgentTarget || null,
       allowedPaths: options.allowedPaths || [],
       modelPreference: options.modelPreference ? { ...options.modelPreference } : null,
       modelSelection: options.modelPreference ? { configured: true, applied: false, ...options.modelPreference } : null,
@@ -4289,6 +4318,7 @@ class CursorBridge {
   }
 
   async _verifyAgentsWorkspace(c, job, stage = 'before_fill') {
+    if (job?.existingAgentTarget) return this.existingAgentController.verify(c, job, stage);
     if (isSshWorkspaceUri(job?.projectPath || this.projectPath)) return this._verifySshWorkspace(c, job, stage);
     if (!job || job.targetUiFlavor !== 'agents_v2') return;
     const projectPath = job.projectPath || this.projectPath;
@@ -4528,7 +4558,7 @@ class CursorBridge {
     const page = await findPage({
       targetId: this._lastLifecycle && this._lastLifecycle.targetId,
       purpose: 'parallel_agent',
-      preferAgentsV2: !isSshWorkspaceUri(job.projectPath || this.projectPath),
+      preferAgentsV2: !job.existingAgentTarget && !isSshWorkspaceUri(job.projectPath || this.projectPath),
     });
     job.targetId = page.id;
     job.targetUiFlavor = page.capabilities && page.capabilities.uiFlavor || null;
@@ -4536,7 +4566,8 @@ class CursorBridge {
     await c.ready;
     let sent = false;
     try {
-      if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_continue');
+      if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, 'before_continue');
+      else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_continue');
       this._throwIfCancelledBeforeSend(job);
       await this._ensureChatPanel(c);
       const entries = await this._readAgentEntries(c, true);
@@ -4555,7 +4586,7 @@ class CursorBridge {
       await this._waitForSelectedAgent(c, job.agentId);
       await this._ensureChatPanel(c);
       this._throwIfCancelledBeforeSend(job);
-      await this._applyModelPreference(c, job.modelPreference, job);
+      if (!job.existingAgentTarget) await this._applyModelPreference(c, job.modelPreference, job);
       this._throwIfCancelledBeforeSend(job);
       job.responseBaseline = await this._captureSessionResponseBaseline(c);
       this._persistSessionResponseBaseline(job);
@@ -4593,7 +4624,8 @@ class CursorBridge {
       const c = makeClient(page.webSocketDebuggerUrl);
       await c.ready;
       try {
-        if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_poll');
+        if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, 'before_poll');
+        else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_poll');
         let entries = await this._readAgentEntries(c);
         let entry = entries.find((e) => e.id === job.agentId) || null;
         if (!entry && (job.execution === 'fifo' || job.effectiveExecution === 'fifo')) {
@@ -4788,7 +4820,8 @@ class CursorBridge {
   }
 
   async _withRestoredAgentSelection(c, job, operation) {
-    if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_collect');
+    if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, 'before_collect');
+    else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_collect');
     const entries = await this._readAgentEntries(c, true);
     const previousSelectedId = (entries.find((entry) => entry.isSelected) || {}).id || null;
     try {
@@ -4796,7 +4829,8 @@ class CursorBridge {
     } finally {
       if (previousSelectedId && previousSelectedId !== job.agentId) {
         try {
-          if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_restore');
+          if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, 'before_restore');
+          else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_restore');
           const opened = await this._requestExactAgentSelection(c, previousSelectedId);
           if (opened !== 'OPENED') throw new Error(`Unable to restore ${previousSelectedId}: ${opened}`);
           await this._waitForSelectedAgent(c, previousSelectedId);
@@ -4824,7 +4858,8 @@ class CursorBridge {
       // Agent History 已给出完成图标，但打开会话后的 Markdown/虚拟列表仍可能延迟挂载。
       // 给视图约 24 秒稳定时间，并允许只有一个可见 Markdown（常见于用户 prompt 不是 markdown 的情况）。
       for (let i = 0; i < 80; i++) {
-        if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_read_reply');
+        if (job.existingAgentTarget) await this.existingAgentController.verify(c, job, 'before_read_reply');
+        else if (isSshWorkspaceUri(job.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_read_reply');
         const snap = await this._readResponseSnapshot(c);
         const candidate = String(await evalJS(c, EXPR_EXTRACT) || '').trim();
         const hasNewTurn = isSessionTurnReplyReady(job.responseBaseline, snap);
@@ -5116,7 +5151,8 @@ class CursorBridge {
   }
 
   async _stopBoundAgentOnClient(c, job, options = {}) {
-    if (isSshWorkspaceUri(job?.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_stop');
+    if (job?.existingAgentTarget) await this.existingAgentController.verify(c, job, 'before_stop_workspace');
+    else if (isSshWorkspaceUri(job?.projectPath || this.projectPath)) await this._verifySshWorkspace(c, job, 'before_stop');
     if (!job || !job.agentId) return { confirmed: false, state: 'unbound_agent' };
     const preferComposer = options.preferComposer === true
       || job.execution === 'fifo'
@@ -5878,6 +5914,24 @@ const WORKSPACE_PATH_SCHEMA = {
 function buildToolDefinitions(bridgeInstance) {
   return [
     {
+      name: 'cursor_agent_attach',
+      description: 'Inspect or explicitly attach the currently selected saved Agent in one already-open classic Cursor IDE. Supports local and SSH folders. inspect returns metadata only; attach requires expected_agent_id, checks idle/empty draft twice, and never sends a prompt or creates a chat. Unknown historical Agents receive read-only Bridge access; existing trusted policies are preserved. get reads only this caller\'s saved attachment.',
+      inputSchema: { type: 'object', additionalProperties: false,
+        properties: { action: { type: 'string', enum: ['inspect', 'attach', 'get'] },
+          expected_agent_id: { type: 'string' }, target_id: { type: 'string' },
+          workspace_path: { type: 'string', description: 'Optional exact existing window-folder assertion; never switches or registers a workspace' } },
+        required: ['action'] },
+    },
+    {
+      name: 'cursor_agent_send',
+      description: 'Send a user-authorized task to the exact Agent explicitly attached by this caller. Keeps the existing Cursor window/folder, history and model; never creates another Agent or opens a window. Unknown historical attachments remain read-only. The exact taskId is used for polling/result receipt. Existing unsent drafts block submission instead of being overwritten.',
+      inputSchema: { type: 'object', additionalProperties: false,
+        properties: { prompt: { type: 'string' }, request_id: { type: 'string', minLength: 1, maxLength: 200 },
+          read_only: { type: 'boolean' }, background: { type: 'boolean', default: true },
+          timeout_ms: { type: 'integer', minimum: 30000, maximum: 900000, default: 600000 },
+          request_context: REQUEST_CONTEXT_SCHEMA }, required: ['prompt', 'request_id'] },
+    },
+    {
       name: 'cursor_connection',
       description: 'List, inspect or save named SSH targets. By default each Codex caller has its own dedicated Agent. session_scope=shared explicitly opts into the legacy shared Agent. Get/list do not contact Cursor. Saving a different target requires replace=true.',
       inputSchema: {
@@ -6141,6 +6195,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const bridge = callerBridges.forRequest(request);
     if (!callerConnections.has(bridge)) callerConnections.set(bridge, new NamedConnectionController(bridge));
     const namedConnections = callerConnections.get(bridge);
+    if (name === 'cursor_agent_attach') {
+      const options = { targetId: args?.target_id, workspacePath: args?.workspace_path, expectedAgentId: args?.expected_agent_id };
+      const result = args?.action === 'get' ? bridge.existingAgentController.get()
+        : args?.action === 'inspect' ? await bridge.existingAgentController.inspect(options)
+          : args?.action === 'attach' ? await bridge.existingAgentController.attach(options)
+            : (() => { throw new Error('action must be inspect, attach or get'); })();
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
+    if (name === 'cursor_agent_send') {
+      const result = await bridge.existingAgentController.send(args?.prompt, { requestId: args?.request_id,
+        readOnly: args?.read_only, background: args?.background !== false, timeoutMs: args?.timeout_ms,
+        requestContext: args?.request_context });
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
     if (name === 'cursor_connection') {
       const action = args?.action;
       const result = action === 'list' ? namedConnections.list({ sessionScope: args?.session_scope })
@@ -6374,6 +6442,7 @@ export {
   exprInspectAgentWorkspace,
   EXPR_PAGE_CAPABILITIES,
   EXPR_HISTORY_ENTRIES,
+  EXPR_AGENT_ATTACHMENT_SNAPSHOT,
   EXPR_PROVIDER_ERROR,
   EXPR_CLICK_SEND,
   EXPR_SNAP,

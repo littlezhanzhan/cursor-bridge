@@ -4,6 +4,20 @@ All notable changes to Cursor Bridge are documented here.
 
 The project follows [Semantic Versioning](https://semver.org/).
 
+## [6.0.9-ssh.7] - 2026-10-29
+
+- Add explicit inspect/attach/get for the selected existing classic IDE Agent,
+  including local Windows folders and SSH folders. Metadata-only attachment
+  neither sends a message nor creates a conversation or window.
+- Preserve trusted saved access policies. Unknown historical Agents receive
+  read-only Bridge access without changing native Cursor permission or model
+  settings. Caller-specific references reuse one canonical session per Agent.
+- Add send-to-attached continuation with a pinned window/folder/Agent, draft
+  checks and reply baselines. Never enter normal automatic window startup for
+  an attached conversation. Concurrent aliases cannot send to one Agent at once.
+- Guard selection changes, draft input, detected attachments, active turns and
+  modal/menu blockers before binding or filling an existing conversation.
+
 ## [6.0.9-ssh.6] - 2026-10-29
 
 - Newly created SSH Agents now support authorized read/write tasks by default.

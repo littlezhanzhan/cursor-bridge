@@ -1,4 +1,10 @@
-# Experimental SSH collaboration — 6.0.9-ssh.6
+# Existing IDE Agents and SSH collaboration — 6.0.9-ssh.7
+
+For an explicitly selected existing local or SSH IDE conversation, see
+[existing Agent attachment](existing-agent-attachment.md). Attachment sends no
+message and does not create a conversation or open another window. Unknown
+historical Agents receive read-only Bridge access; native Cursor permissions
+are not changed. This is separate from the new-Agent write policy below.
 
 ## New Agent read/write capability
 
